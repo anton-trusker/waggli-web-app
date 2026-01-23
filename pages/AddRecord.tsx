@@ -47,7 +47,10 @@ const AddRecord: React.FC = () => {
                 'invoice': 'documents',
                 'checkup': 'checkup',
                 'other': 'medical-note',
-                'medical-note': 'medical-note'
+                'checkup': 'checkup',
+                'other': 'medical-note',
+                'medical-note': 'medical-note',
+                'allergy': 'allergy'
             };
             setRecordType(typeMap[data.type.toLowerCase()] || 'medical-note');
         }
@@ -248,7 +251,10 @@ const SelectionGrid = ({ pet, onSelect, onDataReady }: { pet: any, onSelect: (ty
                     { id: 'vitals', label: 'Vitals', icon: 'monitor_weight', color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' },
                     { id: 'checkup', label: 'Checkup', icon: 'medical_services', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
                     { id: 'documents', label: 'Document', icon: 'description', color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
+                    { id: 'checkup', label: 'Checkup', icon: 'medical_services', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+                    { id: 'documents', label: 'Document', icon: 'description', color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
                     { id: 'medical-note', label: 'Note', icon: 'note_add', color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-800' },
+                    { id: 'allergy', label: 'Allergy', icon: 'warning', color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/20' },
                 ].map((item) => (
                     <button
                         key={item.id}
@@ -272,7 +278,10 @@ const RecordForm = ({ type, pet, onCancel, initialData, initialImage }: { type: 
         medication: MedicationForm,
         vitals: VitalsForm,
         documents: DocumentForm,
+        vitals: VitalsForm,
+        documents: DocumentForm,
         'medical-note': MedicalNoteForm,
+        allergy: AllergyForm,
         checkup: CheckupForm,
     }[type];
 
@@ -284,6 +293,130 @@ const RecordForm = ({ type, pet, onCancel, initialData, initialImage }: { type: 
 // ... (Specific Form Components: VaccinationForm, MedicationForm, etc. - ensure they are imported or defined below. Assuming they are part of the file as per original structure, just ensuring no mock data usage)
 
 // [KEEP ALL SUB-FORMS: VaccinationForm, MedicationForm, VitalsForm, DocumentForm, MedicalNoteForm, CheckupForm]
+// ... (Specific Form Components)
+
+const AllergyForm = ({ onCancel, initialData, petId }: { onCancel: () => void, initialData?: any, petId: string, initialImage?: string | null }) => {
+    const { addActivity, pets, updatePet } = useApp(); // Ideally use addAllergy if exists, else addActivity + updatePet
+    const [formData, setFormData] = useState({
+        name: initialData?.title || '',
+        severity: 'Mild',
+        category: 'Food',
+        reaction: '',
+        emergencyPlan: ''
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        // 1. Add to Pet's Allergy List (Simple array in current User/Pet model, or new Allergy model)
+        // Since we updated types.ts to have Allergy interface, we should ideally have addAllergy in context.
+        // For now, we'll update the Pet's allergies array AND add an Activity log.
+
+        const currentPet = pets.find(p => p.id === petId);
+        if (currentPet) {
+            const newAllergies = [...(currentPet.allergies || []), `${formData.name} (${formData.severity})`];
+            updatePet({ ...currentPet, allergies: newAllergies });
+        }
+
+        // 2. Add Activity Log
+        addActivity({
+            id: Date.now().toString(),
+            petId,
+            type: 'allergy',
+            title: `Allergy: ${formData.name}`,
+            date: new Date().toISOString().split('T')[0],
+            description: `Severity: ${formData.severity}. Reaction: ${formData.reaction}. Plan: ${formData.emergencyPlan}`,
+            icon: 'warning',
+            colorClass: 'bg-red-100 text-red-600'
+        });
+
+        onCancel();
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Allergen Name</label>
+                <input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                    placeholder="e.g. Chicken, Pollen, Penicillin"
+                    type="text"
+                    required
+                    autoFocus
+                />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Category</label>
+                    <select
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                    >
+                        <option>Food</option>
+                        <option>Environmental</option>
+                        <option>Medication</option>
+                        <option>Insect</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Severity</label>
+                    <select
+                        value={formData.severity}
+                        onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
+                        className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                    >
+                        <option>Mild</option>
+                        <option>Moderate</option>
+                        <option>Severe</option>
+                        <option>Anaphylaxis</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Reaction Symptoms</label>
+                <input
+                    value={formData.reaction}
+                    onChange={(e) => setFormData({ ...formData, reaction: e.target.value })}
+                    className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                    placeholder="e.g. Itching, Hives, Vomiting"
+                    type="text"
+                />
+            </div>
+
+            <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Emergency Plan (Optional)</label>
+                <textarea
+                    value={formData.emergencyPlan}
+                    onChange={(e) => setFormData({ ...formData, emergencyPlan: e.target.value })}
+                    className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white h-20 resize-none"
+                    placeholder="e.g. Administer Benadryl, Call Vet immediately"
+                />
+            </div>
+
+            {/* Warning for Severe */}
+            {(formData.severity === 'Severe' || formData.severity === 'Anaphylaxis') && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 p-3 rounded-xl flex items-start gap-3">
+                    <span className="material-icons-round text-red-500">warning</span>
+                    <p className="text-xs text-red-600 dark:text-red-300">High severity allergies will be pinned to the top of your pet's profile for visibility.</p>
+                </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={onCancel} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm transition-colors">Cancel</button>
+                <button type="submit" className="px-6 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold shadow-md text-sm transition-all flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg">check</span> Save Alert
+                </button>
+            </div>
+        </form>
+    );
+};
+
 // ...
 const VaccinationForm = ({ onCancel, initialData, petId, initialImage }: { onCancel: () => void, initialData?: any, petId: string, initialImage?: string | null }) => {
     const { addVaccine, addDocument } = useApp();

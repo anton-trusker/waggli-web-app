@@ -280,6 +280,19 @@ export interface Reminder {
   priority?: 'Low' | 'Medium' | 'High';
 }
 
+// ... types.ts
+export interface Allergy {
+  id: string;
+  petId: string;
+  name: string;
+  severity: 'Mild' | 'Moderate' | 'Severe' | 'Anaphylaxis';
+  category: 'Food' | 'Environmental' | 'Medication' | 'Insect' | 'Other';
+  reaction: string; // e.g. "Hives"
+  notes?: string;
+  dateIdentified?: string;
+  emergencyPlan?: string; // "Use Epipen"
+}
+
 export interface Notification {
   id: string;
   userId?: string;

@@ -9,17 +9,19 @@ const cleanJSON = (text: string) => {
     return text.replace(/```json/g, '').replace(/```/g, '').trim();
 };
 
-export const generateHealthCheck = async (pet: any, records: any[]) => {
+export const generateHealthCheck = async (pet: any, records: any[], score: number, activities: any[] = []) => {
     try {
         const prompt = `
-      Analyze this pet's health status based on their profile and records:
+      Analyze this pet's health status based on their profile, deterministic wellness score, and records.
       Pet: ${JSON.stringify(pet)}
-      Records: ${JSON.stringify(records)}
+      Wellness Score (0-100, Algo-calculated): ${score}
+      Medical Records: ${JSON.stringify(records)}
+      Recent Activities (including allergies/logs): ${JSON.stringify(activities.slice(0, 10))}
       
       Return a JSON object with:
-      - score: number (1-100 wellness score)
-      - summary: string (1-2 sentence summary)
-      - status: "Excellent" | "Good" | "Fair" | "Needs Attention"
+      - score: number (Use the provided score as baseline, but adjust slightly if AI finds qualitative insights, stay within +/- 5 points)
+      - summary: string (Explain the score: e.g. "Score is 60 because vaccines are overdue and weight checks are missing.")
+      - status: "Excellent" | "Good" | "Fair" | "Needs Attention" (derive from score: >90 Exc, >75 Good, >60 Fair, else Needs Attn)
     `;
 
         const result = await model.generateContent(prompt);
@@ -27,19 +29,32 @@ export const generateHealthCheck = async (pet: any, records: any[]) => {
         return JSON.parse(cleanJSON(text));
     } catch (error) {
         console.error("Gemini Health Check Error:", error);
-        return { score: 85, summary: "Unable to generate real-time analysis.", status: "Good" };
+        return { score: score || 85, summary: "Analysis unavailable.", status: "Good" };
     }
 };
 
-export const generateCareGuide = async (pets: any[]) => {
+export const generateCareGuide = async (pets: any[], context: any = {}) => {
     if (!pets.length) return [];
 
     try {
         const prompt = `
-      Create a personalized care guide for these pets: ${JSON.stringify(pets.map(p => ({ name: p.name, breed: p.breed, age: p.age })))}
-      Return a JSON array of 3-5 tips, each object having:
-      - title: string
-      - content: string (short actionable advice)
+      Create a personalized care guide for these pets, considering their health context.
+      Pets: ${JSON.stringify(pets.map(p => ({
+            name: p.name,
+            breed: p.breed,
+            age: p.age,
+            allergies: p.allergies
+        })))}
+      Context: ${JSON.stringify(context)}
+      (Context includes: Health Score, Upcoming Appointments, Known Allergies)
+
+      Return a JSON array of 3-5 tips.
+      Rules:
+      1. If allergies exist, mention specific avoidance tips (e.g. "Avoid Chicken treats").
+      2. If appointments are upcoming (next 3 days), add a prep tip (e.g. "Fast before surgery" if applicable).
+      3. If health score is low, suggest the missing action (e.g. "Book vaccination").
+      
+      Output format: Array of { title: string, content: string }
     `;
 
         const result = await model.generateContent(prompt);
