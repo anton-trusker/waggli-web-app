@@ -7,11 +7,12 @@ import { updatePlatformSettings, getAllLanguages, updateLanguageStatus, getTrans
 import { uploadFile } from '../../services/storage';
 import { generateBulkTranslations } from '../../services/gemini';
 import { TranslationItem, SupportedLanguage } from '../../types';
+import { AuditLogViewer } from '../../components/admin/AuditLogViewer';
 
 const AdminSettings: React.FC = () => {
     const { settings, updateLocalSettings } = usePlatform();
     const { refreshTranslations } = useLocalization();
-    const [activeTab, setActiveTab] = useState<'Branding' | 'Localization' | 'Modules'>('Branding');
+    const [activeTab, setActiveTab] = useState<'Branding' | 'Localization' | 'Modules' | 'Audit Logs'>('Branding');
     const [loading, setLoading] = useState(false);
 
     // Branding State
@@ -98,12 +99,12 @@ const AdminSettings: React.FC = () => {
             <div className="p-6 md:p-10 max-w-7xl mx-auto w-full space-y-8">
 
                 {/* Tabs */}
-                <div className="flex gap-6 border-b border-gray-200 dark:border-gray-800">
-                    {['Branding', 'Localization', 'Modules'].map(tab => (
+                <div className="flex gap-6 border-b border-gray-200 dark:border-gray-800 overflow-x-auto pb-1">
+                    {['Branding', 'Localization', 'Modules', 'Audit Logs'].map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab as any)}
-                            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'
+                            className={`pb-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             {tab}
@@ -338,6 +339,13 @@ const AdminSettings: React.FC = () => {
                                 <p>Disabling a module will hide it from the navigation menu and prevent access for all users immediately.</p>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* --- AUDIT LOGS TAB --- */}
+                {activeTab === 'Audit Logs' && (
+                    <div className="animate-in fade-in">
+                        <AuditLogViewer />
                     </div>
                 )}
 

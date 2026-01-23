@@ -3,7 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../../components/Header';
 import { useAdmin } from '../../hooks/useAdmin';
+import { logAdminAction } from '../../services/admin';
 import { User } from '../../types';
+import { BanUserModal } from '../../components/admin/BanUserModal';
 
 // Mock Activity Data (Keeping activity mock for now as backend log isn't fully spec'd yet)
 const MOCK_ACTIVITY = [
@@ -24,6 +26,7 @@ const AdminUserDetails: React.FC = () => {
     const [formData, setFormData] = useState<any>({});
     const [adminNote, setAdminNote] = useState('Customer prefers email communication. Verified owner.');
     const [showEmailModal, setShowEmailModal] = useState(false);
+    const [showBanModal, setShowBanModal] = useState(false);
 
     useEffect(() => {
         if (users.length > 0 && id) {
@@ -56,11 +59,27 @@ const AdminUserDetails: React.FC = () => {
         setUser({ ...user, status: newStatus });
     };
 
-    const handleImpersonate = () => {
+    const handleImpersonate = async () => {
         if (confirm(`Login as ${user.name}? This will log you out of Admin.`)) {
-            // Logic to switch auth token would go here
-            alert("Switched to user view.");
-            navigate('/');
+            try {
+                // 1. Log the action
+                await logAdminAction('impersonate', 'user', user.id, { target_email: user.email });
+
+                // 2. Set flags for the Banner
+                sessionStorage.setItem('waggly_impersonating', 'true');
+                sessionStorage.setItem('waggly_admin_id', 'current_admin_id_placeholder');
+
+                // 3. Get the login URL (or dev fallback)
+                const { impersonateUser } = await import('../../services/admin');
+                const redirectUrl = await impersonateUser(user.id);
+
+                // 4. Redirect
+                window.location.href = redirectUrl;
+            } catch (err) {
+                console.error("Impersonation failed:", err);
+                alert("Failed to start impersonation session.");
+                sessionStorage.removeItem('waggly_impersonating');
+            }
         }
     };
 
@@ -109,8 +128,8 @@ const AdminUserDetails: React.FC = () => {
                         <button
                             onClick={handleStatusToggle}
                             className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${user.status === 'Active'
-                                    ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-100'
-                                    : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-100'
+                                ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-100'
+                                : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-100'
                                 }`}
                         >
                             {user.status === 'Active' ? 'Suspend Account' : 'Activate Account'}
@@ -125,8 +144,8 @@ const AdminUserDetails: React.FC = () => {
                             key={tab}
                             onClick={() => setActiveTab(tab as any)}
                             className={`pb-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === tab
-                                    ? 'border-primary text-primary'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                                 }`}
                         >
                             {tab}
@@ -309,6 +328,22 @@ const AdminUserDetails: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {/* Ban Modal */}
+                {showBanModal && (
+                    <BanUserModal
+                        isOpen={showBanModal}
+                        onClose={() => setShowBanModal(false)}
+                        userName={user.name}
+                        onConfirm={async (type, reason, userReason, expiry) => {
+                            const { banUser } = await import('../../services/admin');
+                            await banUser(user.id, type, reason, userReason, expiry);
+                            setUser({ ...user, status: type === 'hard_ban' ? 'Banned' : 'Suspended' });
+                            setShowBanModal(false);
+                            alert(`User has been ${type === 'hard_ban' ? 'Banned' : 'Suspended'}`);
+                        }}
+                    />
                 )}
 
             </div>

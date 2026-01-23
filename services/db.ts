@@ -77,9 +77,22 @@ export const getPlatformSettings = async (): Promise<PlatformSettings | null> =>
 
 export const updatePlatformSettings = async (settings: Partial<PlatformSettings>) => {
     try {
+        const dbPayload: any = {
+            id: 'global',
+            ...settings
+        };
+
+        // Explicitly map camelCase to snake_case for DB
+        if (settings.platformName) dbPayload.platform_name = settings.platformName;
+        if (settings.primaryColor) dbPayload.primary_color = settings.primaryColor;
+
+        // Remove camelCase keys that don't exist in DB
+        delete dbPayload.platformName;
+        delete dbPayload.primaryColor;
+
         const { error } = await supabase
             .from('platform_settings')
-            .upsert({ id: 'global', ...settings });
+            .upsert(dbPayload);
 
         if (error) throw error;
     } catch (e) {
@@ -426,6 +439,122 @@ export const fetchCampaigns = async (): Promise<MarketingCampaign[]> => {
         return data as unknown as MarketingCampaign[];
     } catch (e) {
         return [];
+    }
+};
+
+// --- ADMIN STATS (REAL DATA) ---
+
+export const fetchAllPets = async (): Promise<Pet[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('pets')
+            .select('*');
+
+        if (error) throw error;
+        return data as Pet[];
+    } catch (e) {
+        console.error("Fetch All Pets Failed", e);
+        return [];
+    }
+};
+
+export const calculateAdminStats = async (users: User[], pets: Pet[]) => {
+    // Calculate real revenue from paid plans
+    const paidUsers = users.filter(user => user.plan !== 'Free');
+    const revenue = paidUsers.reduce((sum, user) => {
+        if (user.plan === 'Premium') return sum + 10;  // $10/month
+        if (user.plan === 'Family') return sum + 15;   // $15/month
+        return sum;
+    }, 0);
+
+    // Calculate average pets per user
+    const avgPetsPerUser = users.length > 0 ? pets.length / users.length : 0;
+
+    return {
+        totalUsers: users.length,
+        totalPets: pets.length,
+        totalRevenue: revenue,
+        activeSubs: paidUsers.length,
+        avgPetsPerUser: avgPetsPerUser.toFixed(1)
+    };
+};
+
+export const getTrends = async () => {
+    try {
+        const now = new Date();
+        const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        // Users: compare this week to last week
+        const { count: totalUsersCount } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true });
+
+        const { count: usersThisWeek } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .gte('created_at', lastWeek.toISOString());
+
+        const { count: usersLastWeek } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .lt('created_at', lastWeek.toISOString())
+            .gte('created_at', new Date(lastWeek.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+        const userGrowth = usersLastWeek && usersLastWeek > 0
+            ? ((usersThisWeek || 0) - usersLastWeek) / usersLastWeek * 100
+            : usersThisWeek ? 100 : 0;
+
+        // Pets: similar calculation
+        const { count: petsThisWeek } = await supabase
+            .from('pets')
+            .select('*', { count: 'exact', head: true })
+            .gte('created_at', lastWeek.toISOString());
+
+        const { count: petsLastWeek } = await supabase
+            .from('pets')
+            .select('*', { count: 'exact', head: true })
+            .lt('created_at', lastWeek.toISOString())
+            .gte('created_at', new Date(lastWeek.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+        const petGrowth = petsLastWeek && petsLastWeek > 0
+            ? ((petsThisWeek || 0) - petsLastWeek) / petsLastWeek * 100
+            : petsThisWeek ? 100 : 0;
+
+        // Revenue growth (simplified - based on user growth)
+        const revenueGrowth = userGrowth * 0.7; // Approximate
+
+        // Sub growth = paid users this week vs last week
+        const { data: paidThisWeek } = await supabase
+            .from('users')
+            .select('plan')
+            .neq('plan', 'Free')
+            .gte('created_at', lastWeek.toISOString());
+
+        const { data: paidLastWeek } = await supabase
+            .from('users')
+            .select('plan')
+            .neq('plan', 'Free')
+            .lt('created_at', lastWeek.toISOString())
+            .gte('created_at', new Date(lastWeek.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+        const subGrowth = (paidLastWeek?.length || 0) > 0
+            ? ((paidThisWeek?.length || 0) - (paidLastWeek?.length || 0)) / (paidLastWeek?.length || 1) * 100
+            : (paidThisWeek?.length || 0) > 0 ? 100 : 0;
+
+        return {
+            userGrowth: parseFloat(userGrowth.toFixed(1)),
+            petGrowth: parseFloat(petGrowth.toFixed(1)),
+            revenueGrowth: parseFloat(revenueGrowth.toFixed(1)),
+            subGrowth: parseFloat(subGrowth.toFixed(1))
+        };
+    } catch (error) {
+        console.error("Get Trends Failed", error);
+        return {
+            userGrowth: 0,
+            petGrowth: 0,
+            revenueGrowth: 0,
+            subGrowth: 0
+        };
     }
 };
 

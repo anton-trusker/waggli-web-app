@@ -43,6 +43,10 @@ import { AppProvider, useApp } from './context/AppContext';
 import { LocalizationProvider } from './context/LocalizationContext';
 import { PlatformProvider } from './context/PlatformContext';
 import { FeatureFlagProvider } from './context/FeatureFlagContext';
+import { FeatureGate } from './components/FeatureGate';
+import AdminRoutes from './components/AdminRoutes';
+
+import { ImpersonationBanner } from './components/admin/ImpersonationBanner';
 
 // Wrapper for protected routes
 const ProtectedRoutes = () => {
@@ -59,6 +63,7 @@ const ProtectedRoutes = () => {
 
   return (
     <Layout>
+      <ImpersonationBanner />
       <Outlet />
     </Layout>
   );
@@ -107,26 +112,34 @@ const AppRoutes: React.FC = () => {
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/settings" element={<Settings />} />
 
-        {/* Services Routes */}
-        <Route path="/discover" element={<Services defaultCategory="All" />} />
-        <Route path="/service/:id" element={<ServiceDetails />} />
-        <Route path="/find-vet" element={<Services defaultCategory="Vet" />} />
+        {/* Services Routes - Feature Gated */}
+        <Route element={
+          <FeatureGate feature="services_module">
+            <Outlet />
+          </FeatureGate>
+        }>
+          <Route path="/discover" element={<Services defaultCategory="All" />} />
+          <Route path="/service/:id" element={<ServiceDetails />} />
+          <Route path="/find-vet" element={<Services defaultCategory="Vet" />} />
+        </Route>
 
         {/* Provider Routes (Authenticated) */}
         <Route path="/provider/register" element={<ProviderRegister />} />
         <Route path="/provider/dashboard" element={<ProviderDashboard />} />
 
-        {/* Admin Routes */}
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/admin/users/:id" element={<AdminUserDetails />} />
-        <Route path="/admin/providers" element={<AdminProviders />} />
-        <Route path="/admin/providers/:id" element={<AdminProviderDetails />} />
-        <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
-        <Route path="/admin/marketing" element={<AdminMarketing />} />
-        <Route path="/admin/marketing/:id" element={<AdminCampaignDetails />} />
-        <Route path="/admin/settings" element={<AdminSettings />} />
-        <Route path="/admin/features" element={<AdminFeatureFlags />} />
+        {/* Admin Routes (RBAC Protected) */}
+        <Route element={<AdminRoutes />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/users/:id" element={<AdminUserDetails />} />
+          <Route path="/admin/providers" element={<AdminProviders />} />
+          <Route path="/admin/providers/:id" element={<AdminProviderDetails />} />
+          <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+          <Route path="/admin/marketing" element={<AdminMarketing />} />
+          <Route path="/admin/marketing/:id" element={<AdminCampaignDetails />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/features" element={<AdminFeatureFlags />} />
+        </Route>
 
         {/* Fallback */}
         <Route path="*" element={<Dashboard />} />
@@ -141,7 +154,8 @@ const App: React.FC = () => {
       <LocalizationProvider>
         <FeatureFlagProvider>
           <AppProvider>
-            <Router>
+            <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+
               <Toaster
                 position="top-center"
                 toastOptions={{

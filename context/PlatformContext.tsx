@@ -12,9 +12,9 @@ interface PlatformContextType {
 const DEFAULT_SETTINGS: PlatformSettings = {
   id: 'global',
   platformName: 'Pawzly',
-  logoUrl: '/vite.svg', // Fallback
-  faviconUrl: '/vite.svg',
-  iconUrl: '',
+  logo_url: '/vite.svg', // Fallback
+  favicon_url: '/vite.svg',
+  icon_url: '',
   primaryColor: '#7C5CFC',
   modules: {
     ai_chat: true,
@@ -55,7 +55,7 @@ export const PlatformProvider: React.FC<PropsWithChildren<{}>> = ({ children }) 
     const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
     link.type = 'image/x-icon';
     link.rel = 'icon';
-    link.href = settings.faviconUrl;
+    link.href = settings.favicon_url;
     document.getElementsByTagName('head')[0].appendChild(link);
 
     // Primary Color (CSS Var)

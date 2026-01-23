@@ -67,14 +67,31 @@ async function importDogBreeds() {
         health_concerns: record.Health_Concerns || null
     }))
 
-    const { data, error } = await supabase
+    // Insert into legacy table
+    const { error: legacyError } = await supabase
         .from('dog_breeds')
         .upsert(dogBreeds, { onConflict: 'breed_name', ignoreDuplicates: false })
 
-    if (error) {
-        console.error('❌ Error importing dog breeds:', error)
+    if (legacyError) {
+        console.error('❌ Error importing dog breeds (legacy):', legacyError)
     } else {
-        console.log(`✅ Imported ${dogBreeds.length} dog breeds`)
+        console.log(`✅ Imported ${dogBreeds.length} dog breeds (Legacy)`)
+    }
+
+    // Insert into Unified reference_breeds
+    const unifiedBreeds = dogBreeds.map(b => ({
+        species: 'Dog',
+        name: b.breed_name
+    }))
+
+    const { error: unifiedError } = await supabase
+        .from('reference_breeds')
+        .upsert(unifiedBreeds, { onConflict: 'name', ignoreDuplicates: true }) // Using name as conflict target might be risky if cat/dog share names, but simpler for now. Ideally composite (species, name).
+
+    if (unifiedError) {
+        console.error('❌ Error importing dog breeds (Unified):', unifiedError)
+    } else {
+        console.log(`✅ Imported ${unifiedBreeds.length} dog breeds (Unified)`)
     }
 }
 
@@ -105,14 +122,31 @@ async function importCatBreeds() {
         unique_traits: record.Unique_Traits || null
     }))
 
-    const { data, error } = await supabase
+    // Insert into legacy table
+    const { error: legacyError } = await supabase
         .from('cat_breeds')
         .upsert(catBreeds, { onConflict: 'breed_name', ignoreDuplicates: false })
 
-    if (error) {
-        console.error('❌ Error importing cat breeds:', error)
+    if (legacyError) {
+        console.error('❌ Error importing cat breeds (legacy):', legacyError)
     } else {
-        console.log(`✅ Imported ${catBreeds.length} cat breeds`)
+        console.log(`✅ Imported ${catBreeds.length} cat breeds (Legacy)`)
+    }
+
+    // Insert into Unified reference_breeds
+    const unifiedBreeds = catBreeds.map(b => ({
+        species: 'Cat',
+        name: b.breed_name
+    }))
+
+    const { error: unifiedError } = await supabase
+        .from('reference_breeds')
+        .upsert(unifiedBreeds, { onConflict: 'name', ignoreDuplicates: true })
+
+    if (unifiedError) {
+        console.error('❌ Error importing cat breeds (Unified):', unifiedError)
+    } else {
+        console.log(`✅ Imported ${unifiedBreeds.length} cat breeds (Unified)`)
     }
 }
 

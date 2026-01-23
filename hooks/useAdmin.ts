@@ -1,11 +1,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
-    fetchAllUsers, 
-    fetchAllProviders, 
-    fetchCampaigns, 
-    fetchPlans, 
-    updateUserStatus, 
+import {
+    fetchAllUsers,
+    fetchAllProviders,
+    fetchCampaigns,
+    fetchPlans,
+    updateUserStatus,
     deleteUserAccount,
     updateProviderVerification,
     saveCampaignDB,
@@ -29,24 +29,33 @@ export const useAdmin = () => {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [u, p, c, pl] = await Promise.all([
+            const [u, p, c, pl, pets, trends] = await Promise.all([
                 fetchAllUsers(),
                 fetchAllProviders(),
                 fetchCampaigns(),
-                fetchPlans()
+                fetchPlans(),
+                (async () => {
+                    const { fetchAllPets } = await import('../services/db');
+                    return fetchAllPets();
+                })(),
+                (async () => {
+                    const { getTrends } = await import('../services/db');
+                    return getTrends();
+                })()
             ]);
-            
+
             setUsers(u);
             setProviders(p);
             setCampaigns(c);
             setPlans(pl);
 
-            // Calculate mock stats from real user count
+            // Calculate real stats using actual data
+            const { calculateAdminStats } = await import('../services/db');
+            const realStats = await calculateAdminStats(u, pets);
+
             setStats({
-                totalUsers: u.length,
-                totalPets: u.length * 1.5, // Mock multiplier
-                totalRevenue: u.length * 10,
-                activeSubs: u.filter(user => user.plan !== 'Free').length
+                ...realStats,
+                trends
             });
 
         } catch (error) {

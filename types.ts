@@ -23,6 +23,25 @@ export interface PlatformSettings {
   updatedAt?: string;
 }
 
+export type AdminRole = 'super_admin' | 'support' | 'content' | 'compliance' | 'finance';
+
+export interface AdminProfile {
+  user_id: string;
+  role: AdminRole;
+  created_at: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  admin_id: string;
+  action: string;
+  target_type: string;
+  target_id?: string;
+  metadata?: any;
+  ip_address?: string;
+  created_at: string;
+}
+
 export interface SupportedLanguage {
   code: string;
   name: string;

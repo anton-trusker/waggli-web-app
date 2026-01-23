@@ -1,20 +1,35 @@
-import { Loader } from '@googlemaps/js-api-loader';
+import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
-const loader = new Loader({
-    apiKey: API_KEY,
-    version: "weekly",
-    libraries: ["places", "geometry"]
-});
+let librariesLoaded = false;
 
 export const loadGoogleMaps = async () => {
-    return loader.load();
+    if (librariesLoaded) return;
+
+    setOptions({
+        key: API_KEY,
+        v: "weekly",
+    });
+
+    try {
+        await Promise.all([
+            importLibrary("maps"),
+            importLibrary("places"),
+            importLibrary("geometry"),
+            importLibrary("geocoding")
+        ]);
+        librariesLoaded = true;
+    } catch (error) {
+        console.error("Failed to load Google Maps libraries:", error);
+        throw error;
+    }
 };
 
 export const geocodeAddress = async (address: string): Promise<{ lat: number, lng: number, formattedAddress: string } | null> => {
     try {
-        await loader.load();
+        await loadGoogleMaps();
+        // Access Geocoder from global namespace after loading 'geocoding' lib
         const geocoder = new google.maps.Geocoder();
         const response = await geocoder.geocode({ address });
 
@@ -29,13 +44,13 @@ export const geocodeAddress = async (address: string): Promise<{ lat: number, ln
         return null;
     } catch (error) {
         console.error("Geocoding Error:", error);
-        return null;
+        return null; // Return null instead of throwing to prevent app crash
     }
 };
 
 export const reverseGeocode = async (lat: number, lng: number): Promise<string | null> => {
     try {
-        await loader.load();
+        await loadGoogleMaps();
         const geocoder = new google.maps.Geocoder();
         const response = await geocoder.geocode({ location: { lat, lng } });
 

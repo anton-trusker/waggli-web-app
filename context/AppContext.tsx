@@ -344,7 +344,8 @@ export const AppProvider = ({ children }: PropsWithChildren<{}>) => {
 
     // Standard CRUD Wrappers
     const updateUser = async (u: User) => {
-        await updateUserProfileDB(u);
+        if (!u.id) return;
+        await updateUserProfileDB(u.id, u);
         setUser(u);
     };
 

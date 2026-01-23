@@ -105,8 +105,8 @@ const AddRecord: React.FC = () => {
                                         key={p.id}
                                         onClick={() => setSelectedPetId(p.id)}
                                         className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 ${isSelected
-                                                ? 'bg-white dark:bg-surface-dark shadow-md ring-1 ring-black/5 dark:ring-white/10 pr-4'
-                                                : 'hover:bg-gray-200/50 dark:hover:bg-gray-700/50 opacity-60 hover:opacity-100'
+                                            ? 'bg-white dark:bg-surface-dark shadow-md ring-1 ring-black/5 dark:ring-white/10 pr-4'
+                                            : 'hover:bg-gray-200/50 dark:hover:bg-gray-700/50 opacity-60 hover:opacity-100'
                                             }`}
                                     >
                                         <img
@@ -286,7 +286,10 @@ const RecordForm = ({ type, pet, onCancel, initialData, initialImage }: { type: 
 // [KEEP ALL SUB-FORMS: VaccinationForm, MedicationForm, VitalsForm, DocumentForm, MedicalNoteForm, CheckupForm]
 // ...
 const VaccinationForm = ({ onCancel, initialData, petId, initialImage }: { onCancel: () => void, initialData?: any, petId: string, initialImage?: string | null }) => {
-    const { addVaccine } = useApp();
+    const { addVaccine, addDocument } = useApp();
+    const [file, setFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [formData, setFormData] = useState({
         title: initialData?.title || '',
         date: initialData?.date || new Date().toISOString().split('T')[0],
@@ -313,109 +316,172 @@ const VaccinationForm = ({ onCancel, initialData, petId, initialImage }: { onCan
             providerId: formData.providerId,
             providerAddress: formData.providerAddress
         };
-        addVaccine(newVax);
-        onCancel();
+        providerId: formData.providerId,
+            providerAddress: formData.providerAddress,
+                notes: formData.notes
     };
+    addVaccine(newVax);
 
-    return (
-        <form onSubmit={handleSubmit} className="space-y-5">
-            {/* ... (Existing JSX) ... */}
-            {initialData && (
-                <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-xl border border-green-100 dark:border-green-800">
-                    <div className="flex items-center gap-2 text-green-700 dark:text-green-300 text-xs font-medium">
-                        <span className="material-icons-round text-base">auto_awesome</span>
-                        <span>Data extracted by AI</span>
-                    </div>
-                    {initialImage && (
-                        <a href={initialImage} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-green-600 hover:underline flex items-center gap-1">
-                            <span className="material-icons-round text-sm">visibility</span> Source
-                        </a>
-                    )}
+    if (formData.setReminder && formData.expiryDate) {
+        addReminder({
+            id: Date.now().toString(),
+            petId,
+            title: `${formData.title} Vaccine Due`,
+            date: formData.expiryDate,
+            time: '09:00',
+            priority: 'High',
+            repeat: 'Never',
+            completed: false
+        });
+    }
+    onCancel();
+};
+
+return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+        {/* ... (Existing JSX) ... */}
+        {initialData && (
+            <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-xl border border-green-100 dark:border-green-800">
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-300 text-xs font-medium">
+                    <span className="material-icons-round text-base">auto_awesome</span>
+                    <span>Data extracted by AI</span>
                 </div>
-            )}
+                {initialImage && (
+                    <a href={initialImage} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-green-600 hover:underline flex items-center gap-1">
+                        <span className="material-icons-round text-sm">visibility</span> Source
+                    </a>
+                )}
+            </div>
+        )}
+        <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Vaccine Name</label>
+            <input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. Rabies"
+                type="text"
+                autoFocus
+                required
+            />
+        </div>
+        {/* ... Rest of form ... */}
+        <div className="grid grid-cols-2 gap-4">
             <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Vaccine Name</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date Given</label>
                 <input
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. Rabies"
-                    type="text"
-                    autoFocus
+                    type="date"
                     required
                 />
             </div>
-            {/* ... Rest of form ... */}
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date Given</label>
-                    <input
-                        value={formData.date}
-                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                        className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
-                        type="date"
-                        required
-                    />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Next Due</label>
-                    <input
-                        value={formData.expiryDate}
-                        onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                        className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
-                        type="date"
-                    />
-                </div>
+            <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Next Due</label>
+                <input
+                    value={formData.expiryDate}
+                    onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                    className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                    type="date"
+                />
             </div>
+        </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Manufacturer</label>
-                    <input
-                        value={formData.manufacturer}
-                        onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
-                        className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
-                        placeholder="Optional"
-                        type="text"
-                    />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Batch #</label>
-                    <input
-                        value={formData.batchNo}
-                        onChange={(e) => setFormData({ ...formData, batchNo: e.target.value })}
-                        className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
-                        placeholder="Optional"
-                        type="text"
-                    />
-                </div>
+        <div className="grid grid-cols-2 gap-4">
+            <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Manufacturer</label>
+                <input
+                    value={formData.manufacturer}
+                    onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+                    className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                    placeholder="Optional"
+                    type="text"
+                />
             </div>
+            <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Batch #</label>
+                <input
+                    value={formData.batchNo}
+                    onChange={(e) => setFormData({ ...formData, batchNo: e.target.value })}
+                    className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                    placeholder="Optional"
+                    type="text"
+                />
+            </div>
+        </div>
 
-            <ProviderSelector
-                label="Clinic / Provider"
-                initialName={formData.doctor}
-                onSelect={(name, address, id) => setFormData({ ...formData, doctor: name, providerAddress: address, providerId: id || '' })}
+        <ProviderSelector
+            label="Clinic / Provider"
+            initialName={formData.doctor}
+            onSelect={(name, address, id) => setFormData({ ...formData, doctor: name, providerAddress: address, providerId: id || '' })}
+        />
+
+        <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Notes</label>
+            <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white h-20 resize-none"
+                placeholder="Side effects, reactions, etc."
             />
+        </div>
 
-            <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={onCancel} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm transition-colors">Cancel</button>
-                <button type="submit" className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold shadow-md text-sm transition-all flex items-center gap-2">
-                    <span className="material-symbols-outlined text-lg">check</span> Save
-                </button>
-            </div>
-        </form>
-    );
+        <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800">
+            <input
+                type="checkbox"
+                checked={formData.setReminder}
+                onChange={(e) => setFormData({ ...formData, setReminder: e.target.checked })}
+                className="w-5 h-5 rounded text-primary focus:ring-0 cursor-pointer"
+                id="vaxReminder"
+            />
+            <label htmlFor="vaxReminder" className="text-sm font-bold text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                Set reminder for next dose?
+            </label>
+        </div>
+
+        {/* File Upload */}
+        <div className={`border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary/50 transition-colors ${file ? 'bg-primary/5 border-primary' : ''}`} onClick={() => fileInputRef.current?.click()}>
+            <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files?.[0] && setFile(e.target.files[0])} />
+            {file ? (
+                <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                    <span className="material-icons-round">description</span> {file.name}
+                </div>
+            ) : (
+                <div className="flex flex-col items-center gap-1 text-gray-400">
+                    <span className="material-icons-round">upload_file</span>
+                    <span className="text-xs font-bold uppercase">Attach Certificate / Image</span>
+                </div>
+            )}
+        </div>
+
+        <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onCancel} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm transition-colors">Cancel</button>
+            <button type="submit" disabled={isUploading} className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold shadow-md text-sm transition-all flex items-center gap-2 disabled:opacity-70">
+                {isUploading ? <span className="material-icons-round animate-spin">refresh</span> : <span className="material-icons-round text-lg">check</span>}
+                {isUploading ? 'Uploading...' : 'Save'}
+            </button>
+        </div>
+    </form>
+);
 };
 
 const MedicationForm = ({ onCancel, initialData, petId, initialImage }: { onCancel: () => void, initialData?: any, petId: string, initialImage?: string | null }) => {
-    const { addMedication } = useApp();
+    const { addMedication, addDocument } = useApp();
+    const [file, setFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [formData, setFormData] = useState({
         title: initialData?.title || '',
         category: initialData?.category?.toLowerCase() || 'pill',
         date: initialData?.date || new Date().toISOString().split('T')[0],
         endDate: initialData?.endDate || '',
-        frequency: initialData?.frequency || ''
+        frequency: initialData?.frequency || '',
+        instructions: '',
+        notes: '',
+        setReminder: false
     });
+    const { addReminder } = useApp();
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -429,90 +495,173 @@ const MedicationForm = ({ onCancel, initialData, petId, initialImage }: { onCanc
             frequency: formData.frequency,
             active: !formData.endDate || new Date(formData.endDate) > new Date()
         };
-        addMedication(newMed);
+        active: !formData.endDate || new Date(formData.endDate) > new Date(),
+            instructions: formData.instructions,
+                notes: formData.notes
+    };
+    addMedication(newMed);
+
+});
+        }
+
+// Upload Proof if exists
+if (file) {
+    setIsUploading(true);
+    uploadFile(file, `documents/${petId}`).then(({ url, fullPath }) => {
+        addDocument({
+            id: Date.now().toString(),
+            petId,
+            name: `${formData.title} RX`,
+            type: 'RX',
+            date: formData.date,
+            size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+            url: url,
+            storagePath: fullPath,
+            icon: 'prescriptions',
+            iconBg: 'bg-red-100',
+            iconColor: 'text-red-600',
+            notes: 'Attached to medication record'
+        });
         onCancel();
+    }).catch(err => {
+        console.error("Upload failed", err);
+        onCancel();
+    });
+} else {
+    onCancel();
+}
     };
 
-    return (
-        <form onSubmit={handleSubmit} className="space-y-5">
+return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Medication Name</label>
+            <input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. Heartgard"
+                type="text"
+                autoFocus
+                required
+            />
+        </div>
+        {/* ... Rest of Med Form ... */}
+        <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Category</label>
+            <div className="grid grid-cols-4 gap-2">
+                {['Pill', 'Liquid', 'Injection', 'Topical'].map(cat => (
+                    <label key={cat} className="cursor-pointer">
+                        <input
+                            className="peer sr-only"
+                            name="category"
+                            type="radio"
+                            value={cat.toLowerCase()}
+                            checked={formData.category === cat.toLowerCase()}
+                            onChange={() => setFormData({ ...formData, category: cat.toLowerCase() })}
+                        />
+                        <div className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-center h-16">
+                            <span className="material-symbols-outlined text-xl mb-1 text-gray-400 peer-checked:text-primary">
+                                {cat === 'Pill' ? 'pill' : cat === 'Liquid' ? 'water_drop' : cat === 'Injection' ? 'syringe' : 'healing'}
+                            </span>
+                            <span className="text-[10px] font-bold">{cat}</span>
+                        </div>
+                    </label>
+                ))}
+            </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
             <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Medication Name</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Start Date</label>
                 <input
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. Heartgard"
-                    type="text"
-                    autoFocus
+                    type="date"
                     required
                 />
             </div>
-            {/* ... Rest of Med Form ... */}
             <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Category</label>
-                <div className="grid grid-cols-4 gap-2">
-                    {['Pill', 'Liquid', 'Injection', 'Topical'].map(cat => (
-                        <label key={cat} className="cursor-pointer">
-                            <input
-                                className="peer sr-only"
-                                name="category"
-                                type="radio"
-                                value={cat.toLowerCase()}
-                                checked={formData.category === cat.toLowerCase()}
-                                onChange={() => setFormData({ ...formData, category: cat.toLowerCase() })}
-                            />
-                            <div className="flex flex-col items-center justify-center p-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-center h-16">
-                                <span className="material-symbols-outlined text-xl mb-1 text-gray-400 peer-checked:text-primary">
-                                    {cat === 'Pill' ? 'pill' : cat === 'Liquid' ? 'water_drop' : cat === 'Injection' ? 'syringe' : 'healing'}
-                                </span>
-                                <span className="text-[10px] font-bold">{cat}</span>
-                            </div>
-                        </label>
-                    ))}
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Start Date</label>
-                    <input
-                        value={formData.date}
-                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                        className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
-                        type="date"
-                        required
-                    />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">End Date</label>
-                    <input
-                        value={formData.endDate}
-                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                        className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
-                        type="date"
-                    />
-                </div>
-            </div>
-
-            <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Frequency</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">End Date</label>
                 <input
-                    value={formData.frequency}
-                    onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                     className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. Twice Daily"
-                    type="text"
+                    type="date"
                 />
             </div>
+        </div>
 
-            <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={onCancel} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm transition-colors">Cancel</button>
-                <button type="submit" className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold shadow-md text-sm transition-all flex items-center gap-2">
-                    <span className="material-symbols-outlined text-lg">check</span> Save
-                </button>
-            </div>
-        </form>
-    );
+        <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Frequency</label>
+            <input
+                value={formData.frequency}
+                onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. Twice Daily"
+                type="text"
+            />
+        </div>
+
+        <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Instructions</label>
+            <input
+                value={formData.instructions}
+                onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. With food"
+                type="text"
+            />
+        </div>
+
+        <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Notes</label>
+            <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary dark:text-white h-20 resize-none"
+                placeholder="Additional details..."
+            />
+        </div>
+
+        <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800">
+            <input
+                type="checkbox"
+                checked={formData.setReminder}
+                onChange={(e) => setFormData({ ...formData, setReminder: e.target.checked })}
+                className="w-5 h-5 rounded text-primary focus:ring-0 cursor-pointer"
+                id="medReminder"
+            />
+            <label htmlFor="medReminder" className="text-sm font-bold text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                Set daily reminder?
+            </label>
+        </div>
+
+        {/* File Upload */}
+        <div className={`border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary/50 transition-colors ${file ? 'bg-primary/5 border-primary' : ''}`} onClick={() => fileInputRef.current?.click()}>
+            <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => e.target.files?.[0] && setFile(e.target.files[0])} />
+            {file ? (
+                <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                    <span className="material-icons-round">description</span> {file.name}
+                </div>
+            ) : (
+                <div className="flex flex-col items-center gap-1 text-gray-400">
+                    <span className="material-icons-round">upload_file</span>
+                    <span className="text-xs font-bold uppercase">Attach RX / Image</span>
+                </div>
+            )}
+        </div>
+
+        <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onCancel} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm transition-colors">Cancel</button>
+            <button type="submit" disabled={isUploading} className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold shadow-md text-sm transition-all flex items-center gap-2 disabled:opacity-70">
+                {isUploading ? <span className="material-icons-round animate-spin">refresh</span> : <span className="material-icons-round text-lg">check</span>}
+                {isUploading ? 'Uploading...' : 'Save'}
+            </button>
+        </div>
+    </form>
+);
 };
 
 const VitalsForm = ({ onCancel, initialData, petId, initialImage }: { onCancel: () => void, initialData?: any, petId: string, initialImage?: string | null }) => {
@@ -751,8 +900,8 @@ const DocumentForm = ({ onCancel, initialData, petId, initialImage }: { onCancel
                             type="button"
                             onClick={() => setDocType(type)}
                             className={`flex flex-col items-center justify-center py-3 rounded-xl border transition-all ${docType === type
-                                    ? 'border-primary bg-primary/5 text-primary'
-                                    : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                ? 'border-primary bg-primary/5 text-primary'
+                                : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
                                 }`}
                         >
                             <span className="material-symbols-outlined text-xl mb-1">

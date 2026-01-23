@@ -64,6 +64,8 @@ interface FormData {
     registrationNumber: string;
     veterinarian: string;
     veterinarianContact: string;
+    distinguishingMarks: string;
+    passportDate: string;
     notes: string;
 }
 
@@ -114,6 +116,8 @@ const AddPet: React.FC = () => {
                 registrationNumber: petToEdit.registrationNumber || '',
                 veterinarian: petToEdit.veterinarian || '',
                 veterinarianContact: petToEdit.veterinarianContact || '',
+                distinguishingMarks: petToEdit.distinguishingMarks || '',
+                passportDate: petToEdit.passportDate || '',
                 notes: petToEdit.breedNotes || ''
             };
         }
@@ -145,6 +149,8 @@ const AddPet: React.FC = () => {
             registrationNumber: '',
             veterinarian: '',
             veterinarianContact: '',
+            distinguishingMarks: '',
+            passportDate: '',
             notes: ''
         };
     });
@@ -180,12 +186,12 @@ const AddPet: React.FC = () => {
             breed: formData.breed || 'Unknown',
             type: typeDisplay,
             weight: `${formData.weight} ${formData.weightUnit}`,
-            age: getAgeFromDate(formData.birthDate),
-            image: finalImage || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=300',
+
+            image_url: finalImage || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=300',
             status: 'Healthy',
             color: formData.color,
             gender: formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1),
-            birthday: formData.birthDate,
+            birth_date: formData.birthDate || null,  // Send null instead of empty string
             microchip_id: formData.microchipId,
             blood_type: formData.bloodType,
             neutered: formData.neutered,
@@ -198,9 +204,11 @@ const AddPet: React.FC = () => {
             height: formData.height ? `${formData.height} ${formData.heightUnit}` : null,
             passport_number: formData.passportNumber,
             passport_issuer: formData.passportIssuer,
+            passport_date: formData.passportDate,
             registration_number: formData.registrationNumber,
             veterinarian: formData.veterinarian,
             veterinarian_contact: formData.veterinarianContact,
+            distinguishing_marks: formData.distinguishingMarks,
             breed_notes: formData.notes
         };
 
@@ -221,16 +229,18 @@ const AddPet: React.FC = () => {
         // Note: addPet might be async in context.
 
         // Save Vaccines
-        for (const v of newVaccines) {
-            if (v.type && v.date) {
-                addVaccine({ ...v, id: Date.now().toString() + Math.random(), petId: newPetId } as VaccineRecord);
+        if (savedPetId) {
+            for (const v of newVaccines) {
+                if (v.type && v.date) {
+                    addVaccine({ ...v, id: undefined, petId: savedPetId } as unknown as VaccineRecord);
+                }
             }
-        }
 
-        // Save Meds
-        for (const m of newMeds) {
-            if (m.name) {
-                addMedication({ ...m, id: Date.now().toString() + Math.random(), petId: newPetId } as Medication);
+            // Save Meds
+            for (const m of newMeds) {
+                if (m.name) {
+                    addMedication({ ...m, id: undefined, petId: savedPetId } as unknown as Medication);
+                }
             }
         }
 
@@ -673,29 +683,95 @@ const StepHealth = ({ formData, update, bloodTypeOptions }: any) => {
                     </div>
                 </div>
 
-                {/* Passport */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Passport Number</label>
-                        <input
-                            type="text"
-                            value={formData.passportNumber}
-                            onChange={(e) => update('passportNumber', e.target.value)}
-                            placeholder="EU-XX-XXXXXX"
-                            className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
-                        />
-                    </div>
-                    <div className="flex items-center gap-4 pt-6">
-                        <div className="flex items-center gap-3">
-                            <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Spayed / Neutered?</span>
-                            <button
-                                onClick={() => update('neutered', !formData.neutered)}
-                                className={`w-12 h-7 rounded-full transition-colors relative ${formData.neutered ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}
-                            >
-                                <span className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full shadow-sm transition-transform ${formData.neutered ? 'translate-x-5' : 'translate-x-0'}`}></span>
-                            </button>
-                            <span className="text-xs font-bold text-gray-500">{formData.neutered ? 'Yes' : 'No'}</span>
+                {/* Passport & Registration */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="material-icons-round text-primary">badge</span> Documents & Registration
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Passport Number</label>
+                            <input
+                                type="text"
+                                value={formData.passportNumber}
+                                onChange={(e) => update('passportNumber', e.target.value)}
+                                placeholder="EU-XX-XXXXXX"
+                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
+                            />
                         </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Passport Issuer</label>
+                            <input
+                                type="text"
+                                value={formData.passportIssuer}
+                                onChange={(e) => update('passportIssuer', e.target.value)}
+                                placeholder="e.g. Dr. Smith"
+                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Passport Date</label>
+                            <input
+                                type="date"
+                                value={formData.passportDate}
+                                onChange={(e) => update('passportDate', e.target.value)}
+                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Registration No.</label>
+                            <input
+                                type="text"
+                                value={formData.registrationNumber}
+                                onChange={(e) => update('registrationNumber', e.target.value)}
+                                placeholder="Local Council / KC Reg"
+                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="h-px bg-gray-100 dark:bg-gray-800"></div>
+
+                {/* Veterinarian Info */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="material-icons-round text-primary">medical_services</span> Primary Veterinarian
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Vet Clinic / Name</label>
+                            <input
+                                type="text"
+                                value={formData.veterinarian}
+                                onChange={(e) => update('veterinarian', e.target.value)}
+                                placeholder="e.g. City Paws Clinic"
+                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Contact (Phone/Email)</label>
+                            <input
+                                type="text"
+                                value={formData.veterinarianContact}
+                                onChange={(e) => update('veterinarianContact', e.target.value)}
+                                placeholder="+1 234 567 8900"
+                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4 pt-4">
+                    <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Spayed / Neutered?</span>
+                        <button
+                            onClick={() => update('neutered', !formData.neutered)}
+                            className={`w-12 h-7 rounded-full transition-colors relative ${formData.neutered ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}
+                        >
+                            <span className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full shadow-sm transition-transform ${formData.neutered ? 'translate-x-5' : 'translate-x-0'}`}></span>
+                        </button>
+                        <span className="text-xs font-bold text-gray-500">{formData.neutered ? 'Yes' : 'No'}</span>
                     </div>
                 </div>
 
