@@ -1,0 +1,9 @@
+{
+  "name": "Pawzly - Pet Health Platform",
+  "description": "A comprehensive pet health management dashboard for modern pet parents.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

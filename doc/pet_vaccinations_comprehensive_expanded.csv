@@ -1,0 +1,106 @@
+Brand_Name,Type,Protects_Against,Generic_Name,Pet_Type,Duration,Description,Vaccine_Category,Administration_Route,Core_NonCore
+Nobivac Rabies,Vaccine,Rabies,Rabies Vaccine,Dog,1 year,Core vaccine for rabies protection; requires annual booster after initial series and 1-year booster,Core,Subcutaneous Injection,Core
+Nobivac Rabies,Vaccine,Rabies,Rabies Vaccine,Dog,3 years,Core vaccine for rabies protection; provides 3-year immunity after initial 1-year booster,Core,Subcutaneous Injection,Core
+Nobivac Rabies,Vaccine,Rabies,Rabies Vaccine,Cat,1 year,Core vaccine for rabies protection in cats; annual booster required,Core,Subcutaneous Injection,Core
+Nobivac Rabies,Vaccine,Rabies,Rabies Vaccine,Cat,3 years,Core vaccine for rabies protection in cats; 3-year immunity after initial booster,Core,Subcutaneous Injection,Core
+IMRAB 1 TF,Vaccine,Rabies,Rabies Vaccine,Dog,1 year,Rabies vaccine with 1-year duration; required annual revaccination,Core,Subcutaneous Injection,Core
+IMRAB 1 TF,Vaccine,Rabies,Rabies Vaccine,Cat,1 year,Rabies vaccine for cats with 1-year duration; annual booster needed,Core,Subcutaneous Injection,Core
+IMRAB 3 TF,Vaccine,Rabies,Rabies Vaccine,Dog,3 years,Rabies vaccine providing 3-year immunity after 1-year booster,Core,Subcutaneous Injection,Core
+IMRAB 3 TF,Vaccine,Rabies,Rabies Vaccine,Cat,3 years,Rabies vaccine for cats with 3-year duration option,Core,Subcutaneous Injection,Core
+Defensor,Vaccine,Rabies,Rabies Vaccine,Dog,1 year,Annual rabies vaccine for dogs; legal requirement in many jurisdictions,Core,Subcutaneous Injection,Core
+Defensor,Vaccine,Rabies,Rabies Vaccine,Dog,3 years,Rabies vaccine providing 3-year protection after initial series,Core,Subcutaneous Injection,Core
+PureVax Rabies,Vaccine,Rabies,Rabies Vaccine,Cat,1 year,Non-adjuvanted rabies vaccine; reduces injection site sarcoma risk in cats; annual booster,Core,Subcutaneous Injection,Core
+PureVax Rabies,Vaccine,Rabies,Rabies Vaccine,Cat,3 years,Non-adjuvanted rabies vaccine with 3-year duration for cats,Core,Subcutaneous Injection,Core
+Nobivac Canine 1-DAPPv,Vaccine,Distemper/Parvovirus/Adenovirus/Parainfluenza,DHPP Vaccine,Dog,1 year,Core vaccine protecting against canine distemper; annual revaccination protocol recommended,Core,Subcutaneous Injection,Core
+Nobivac Canine 1-DAPPv,Vaccine,Distemper/Parvovirus/Adenovirus/Parainfluenza,DHPP Vaccine,Dog,3 years,Core vaccine with extended 3-year duration after initial booster,Core,Subcutaneous Injection,Core
+Vanguard Plus 5,Vaccine,Distemper/Parvovirus/Adenovirus/Parainfluenza/Coronavirus,DA2PPv+CV Vaccine,Dog,3 years,Core vaccine with coronavirus protection; 3-year immunity protocol,Core,Subcutaneous Injection,Core
+Vanguard Plus DHPPi/L4R,Vaccine,Distemper/Adenovirus/Parainfluenza/Parvovirus/Leptospirosis/Rabies,DHPPi/L4R+Rabies Vaccine,Dog,3 years,Combination vaccine protecting against core vaccines plus leptospirosis and rabies; 3-year duration,Core,Subcutaneous Injection,Core
+Duramune Max 5-CvK/4L,Vaccine,Distemper/Adenovirus/Parainfluenza/Parvovirus/Coronavirus/Leptospirosis,DA2PPv+CV+L Vaccine,Dog,1 year,Annual canine vaccine with coronavirus and leptospirosis protection; requires annual revaccination,Core,Subcutaneous Injection,Core
+Nobivac Feline,Vaccine,Feline Viral Rhinotracheitis/Calicivirus/Panleukopenia,FVRCP Vaccine,Cat,1 year,Core vaccine protecting against FHV-1; calicivirus and panleukopenia; annual protocol,Core,Subcutaneous Injection,Core
+Nobivac Feline,Vaccine,Feline Viral Rhinotracheitis/Calicivirus/Panleukopenia,FVRCP Vaccine,Cat,3 years,Core vaccine with 3-year immunity after initial booster series,Core,Subcutaneous Injection,Core
+Felocell 3,Vaccine,Feline Viral Rhinotracheitis/Calicivirus/Panleukopenia,FVRCP Vaccine,Cat,3 years,Core feline vaccine; 3-year protection after initial series; may cause mild fever,Core,Subcutaneous Injection,Core
+Felocell 4,Vaccine,Feline Viral Rhinotracheitis/Calicivirus/Panleukopenia/Chlamydia,FVRCP-C Vaccine,Cat,3 years,Core vaccine plus chlamydia protection for cats with respiratory risk; 3-year duration,Core,Subcutaneous Injection,Core
+PureVax Feline 3,Vaccine,Feline Viral Rhinotracheitis/Calicivirus/Panleukopenia,FVRCP Vaccine,Cat,1 year,Non-adjuvanted vaccine; reduces injection site reactions; annual protocol then 3-year boosters,Core,Subcutaneous Injection,Core
+PureVax Feline 3,Vaccine,Feline Viral Rhinotracheitis/Calicivirus/Panleukopenia,FVRCP Vaccine,Cat,3 years,Non-adjuvanted vaccine with 3-year duration after initial booster,Core,Subcutaneous Injection,Core
+PureVax Feline 4,Vaccine,Feline Viral Rhinotracheitis/Calicivirus/Panleukopenia/Chlamydia,FVRCP-C Vaccine,Cat,1 year,Non-adjuvanted combination vaccine; annual protocol then 3-year boosters,Core,Subcutaneous Injection,Core
+PureVax Feline 4,Vaccine,Feline Viral Rhinotracheitis/Calicivirus/Panleukopenia/Chlamydia,FVRCP-C Vaccine,Cat,3 years,Non-adjuvanted vaccine with chlamydia protection; 3-year duration option,Core,Subcutaneous Injection,Core
+Nobivac Lepto 4,Vaccine,Leptospirosis (4 serovars: canicola;icterohaemorrhagiae;grippotyphosa;pomona),Leptospira Vaccine,Dog,1 year,Non-core vaccine protecting against 4 leptospirosis serovars; annual revaccination in endemic areas,Non-Core,Subcutaneous Injection,Non-Core
+Duramune 4L,Vaccine,Leptospirosis (4 serovars),Leptospira Vaccine,Dog,1 year,Non-core leptospirosis vaccine; annual booster required,Non-Core,Subcutaneous Injection,Non-Core
+Nobivac KC,Vaccine,Bordetella bronchiseptica/Parainfluenza (Kennel Cough),Bordetella Vaccine,Dog,1 year,Non-core vaccine recommended for boarding/daycare dogs; protects against infectious tracheobronchitis,Non-Core,Intranasal or Subcutaneous Injection,Non-Core
+Nobivac KC,Vaccine,Bordetella bronchiseptica/Parainfluenza (Kennel Cough),Bordetella Vaccine,Dog,6 months,Intranasal form with rapid onset; 6-month protection; recommended pre-boarding,Non-Core,Intranasal,Non-Core
+Nobivac Canine Oral Bb,Vaccine,Bordetella bronchiseptica (Kennel Cough),Bordetella Vaccine,Dog,12 months,Oral bordetella vaccine; non-invasive administration; annual revaccination,Non-Core,Oral,Non-Core
+Recombitek Bordetella,Vaccine,Bordetella bronchiseptica (Kennel Cough),Bordetella Vaccine,Dog,1 year,Non-core injectable vaccine for kennel cough; recommended for high-risk dogs,Non-Core,Subcutaneous Injection,Non-Core
+Nobivac Lyme,Vaccine,Lyme Disease (Borrelia burgdorferi),Borrelia Vaccine,Dog,1 year,Non-core vaccine for Lyme disease; recommended in tick-endemic regions; annual booster,Non-Core,Subcutaneous Injection,Non-Core
+Recombitek Lyme,Vaccine,Lyme Disease (Borrelia burgdorferi),Borrelia Vaccine,Dog,1 year,Recombinant Lyme disease vaccine; requires initial 2-dose series 2-3 weeks apart,Non-Core,Subcutaneous Injection,Non-Core
+Nobivac FeLV,Vaccine,Feline Leukemia Virus,FeLV Vaccine,Cat,1 year,Non-core vaccine for outdoor and at-risk cats; annual booster in first year; then based on risk assessment,Non-Core,Subcutaneous Injection,Non-Core
+PureVax FeLV,Vaccine,Feline Leukemia Virus,FeLV Vaccine,Cat,1 year,Non-adjuvanted FeLV vaccine; reduces injection site reactions; annual protocol then every 3 years based on risk,Non-Core,Subcutaneous Injection,Non-Core
+PureVax FeLV,Vaccine,Feline Leukemia Virus,FeLV Vaccine,Cat,3 years,Non-adjuvanted FeLV vaccine with extended duration for at-risk cats,Non-Core,Subcutaneous Injection,Non-Core
+Leukocell 2,Vaccine,Feline Leukemia Virus,FeLV Vaccine,Cat,1 year,Injectable FeLV vaccine; requires annual revaccination for optimal protection,Non-Core,Subcutaneous Injection,Non-Core
+Fel-O-Vax FIV,Vaccine,Feline Immunodeficiency Virus,FIV Vaccine,Cat,1 year,Controversial vaccine; may interfere with FIV antibody testing; efficacy disputed; annual if used,Non-Core,Subcutaneous Injection,Non-Core
+Nobivac Myxo-RHD PLUS,Vaccine,Myxomatosis/Rabbit Hemorrhagic Disease (RHD1 & RHD2),Myxo-RHD PLUS Vaccine,Rabbit,1 year,Single injection protecting against three major rabbit diseases; subcutaneous administration; annual revaccination,Core,Subcutaneous Injection,Core
+Nobivac Myxo-RHD,Vaccine,Myxomatosis/Rabbit Hemorrhagic Disease (RHD1),Myxo-RHD Vaccine,Rabbit,1 year,Two-component vaccine for myxomatosis and classic RHD; administered at 7+ weeks of age,Core,Subcutaneous Injection,Core
+PureVax Ferret Distemper,Vaccine,Canine Distemper,CDV Vaccine,Ferret,1 year,Core vaccine for ferrets; recombinant canarypox vector; initial series at 8; 12; and 16 weeks,Core,Subcutaneous Injection,Core
+Nobivac Rabies,Vaccine,Rabies,Rabies Vaccine,Ferret,1 year,Core vaccine for ferrets; only approved rabies vaccine for ferrets in US; annual booster required,Core,Subcutaneous Injection,Core
+Colombovac PMV,Vaccine,Paramyxovirus Type 1 (PMV1),PMV Vaccine,Pigeon,1 year,Water-based pigeon vaccine protecting against paramyxovirus; common in racing pigeons; annual boosters,Core,Oral or Injection,Core
+Colombovac Pox,Vaccine,Pigeon Pox,Pox Vaccine,Pigeon,1 year,Water-based vaccine for pigeon pox virus; wing-web vaccination method,Core,Wing-web Injection,Core
+Nobivac PMV,Vaccine,Paramyxovirus Type 1 (PMV1),PMV Vaccine,Pigeon,1 year,Oil-based pigeon vaccine for PMV protection; alternative formulation to Colombovac,Core,Injection,Core
+RP Rota 2 in 1,Vaccine,Rotavirus/Paramyxovirus Type 1,Rota-PMV Vaccine,Pigeon,1 year,Combination vaccine for 200 birds; protects against rotavirus and PMV,Core,Oral,Core
+PHA 3 in 1,Vaccine,Paramyxovirus/Herpesvirus/Adenovirus,PHA Vaccine,Pigeon,1 year,Triple combination vaccine for pigeons; protects against three major pigeon viruses,Core,Oral,Core
+Avian Polyomavirus Vaccine,Vaccine,Avian Polyomavirus,APV Vaccine,Parrot,1 year,Vaccine for polyomavirus in parrots; vaccination starting at 21 days of age recommended; repeat in 2 weeks,Non-Core,Subcutaneous Injection,Non-Core
+Bravecto,Parasiticide,Fleas/Ticks,Fluralaner,Dog,12 weeks,Oral chewable flea and tick prevention; kills fleas within 2 hours; monthly equivalent dosing,Non-Vaccine,Oral,Preventative
+Bravecto Plus,Parasiticide,Fleas/Ticks/Heartworm,Fluralaner/Moxidectin,Dog,2 months,Topical broad-spectrum parasiticide; 2-month protection; kills fleas; ticks and prevents heartworm,Non-Vaccine,Topical,Preventative
+Bravecto Topical,Parasiticide,Fleas/Ticks,Fluralaner,Cat,12 weeks,Topical flea and tick solution for cats; waterproof after drying; monthly equivalent coverage,Non-Vaccine,Topical,Preventative
+NexGard,Parasiticide,Fleas/Ticks,Afoxolaner,Dog,1 month,Monthly chewable for flea and tick prevention; beef-flavored palatability,Non-Vaccine,Oral,Preventative
+NexGard Plus,Parasiticide,Fleas/Ticks/Heartworm/Intestinal Parasites,Afoxolaner/Moxidectin/Pyrantel,Dog,1 month,All-in-one monthly chewable; comprehensive internal and external parasite protection,Non-Vaccine,Oral,Preventative
+NexGard Combo,Parasiticide,Fleas/Ticks/Heartworm/Intestinal Parasites,Esafoxolaner/Eprinomectin/Praziquantel,Cat,1 month,Monthly topical broad-spectrum protection for cats; covers all major parasites,Non-Vaccine,Topical,Preventative
+Simparica,Parasiticide,Fleas/Ticks,Sarolaner,Dog,1 month,Fast-acting monthly tablet; starts killing parasites within 3 hours,Non-Vaccine,Oral,Preventative
+Simparica Trio,Parasiticide,Fleas/Ticks/Heartworm/Roundworms/Hookworms,Sarolaner/Moxidectin/Pyrantel,Dog,1 month,Triple protection monthly chewable; liver-flavored for easy administration,Non-Vaccine,Oral,Preventative
+Heartgard Plus,Parasiticide,Heartworm/Roundworms/Hookworms,Ivermectin/Pyrantel,Dog,1 month,Monthly heartworm prevention with intestinal parasite protection; real beef chewable,Non-Vaccine,Oral,Preventative
+Heartgard,Parasiticide,Heartworm,Ivermectin,Cat,1 month,Monthly heartworm prevention for cats; beef-flavored chewable,Non-Vaccine,Oral,Preventative
+Revolution,Parasiticide,Fleas/Heartworm/Ear Mites/Roundworms/Hookworms,Selamectin,Dog,1 month,Monthly topical parasiticide; waterproof after 2 hours; broad-spectrum protection,Non-Vaccine,Topical,Preventative
+Revolution,Parasiticide,Fleas/Heartworm/Ear Mites/Roundworms/Hookworms,Selamectin,Cat,1 month,Monthly topical for cats; safe for kittens 8 weeks and older; broad-spectrum coverage,Non-Vaccine,Topical,Preventative
+Revolution Plus,Parasiticide,Fleas/Ticks/Heartworm/Ear Mites/Roundworms/Hookworms,Selamectin/Sarolaner,Cat,1 month,Enhanced Revolution formula; adds tick protection compared to original Revolution,Non-Vaccine,Topical,Preventative
+Frontline Plus,Parasiticide,Fleas/Ticks/Lice,Fipronil/S-Methoprene,Dog,1 month,Monthly topical flea and tick prevention; waterproof after 24 hours,Non-Vaccine,Topical,Preventative
+Frontline Plus,Parasiticide,Fleas/Ticks/Lice,Fipronil/S-Methoprene,Cat,1 month,Monthly topical for cats; kills fleas; ticks and lice through contact and ingestion,Non-Vaccine,Topical,Preventative
+Frontline Gold,Parasiticide,Fleas/Ticks/Lice,Fipronil/S-Methoprene/Pyriproxyfen,Dog,1 month,Enhanced Frontline formula with insect growth regulator; improved flea egg/larvae control,Non-Vaccine,Topical,Preventative
+Advantage Multi,Parasiticide,Fleas/Heartworm/Roundworms/Hookworms/Whipworms,Imidacloprid/Moxidectin,Dog,1 month,Monthly topical with broad-spectrum internal and external parasite control,Non-Vaccine,Topical,Preventative
+Advantage Multi,Parasiticide,Fleas/Heartworm/Roundworms/Hookworms,Imidacloprid/Moxidectin,Cat,1 month,Monthly topical comprehensive parasiticide for cats; kills fleas through contact,Non-Vaccine,Topical,Preventative
+Advantage II,Parasiticide,Fleas/Lice,Imidacloprid/Pyriproxyfen,Dog,1 month,Monthly flea prevention; focuses on external parasites only,Non-Vaccine,Topical,Preventative
+Advantage II,Parasiticide,Fleas/Lice,Imidacloprid/Pyriproxyfen,Cat,1 month,Monthly flea prevention for cats; kills fleas through contact,Non-Vaccine,Topical,Preventative
+Credelio,Parasiticide,Fleas/Ticks,Lotilaner,Dog,1 month,Beef-flavored monthly tablet; rapid flea and tick onset,Non-Vaccine,Oral,Preventative
+Credelio Plus,Parasiticide,Fleas/Ticks/Heartworm/Hookworms/Roundworms/Whipworms,Lotilaner/Milbemycin,Dog,1 month,All-in-one monthly tablet; comprehensive parasite and heartworm protection,Non-Vaccine,Oral,Preventative
+Interceptor Plus,Parasiticide,Heartworm/Roundworms/Hookworms/Whipworms/Tapeworms,Milbemycin/Praziquantel,Dog,1 month,Chicken-flavored monthly chewable; broad-spectrum dewormer and heartworm prevention,Non-Vaccine,Oral,Preventative
+Sentinel,Parasiticide,Heartworm/Fleas/Roundworms/Hookworms/Whipworms,Milbemycin/Lufenuron,Dog,1 month,Monthly chewable that prevents flea egg hatching; heartworm and parasite protection,Non-Vaccine,Oral,Preventative
+Trifexis,Parasiticide,Fleas/Heartworm/Roundworms/Hookworms/Whipworms,Spinosad/Milbemycin,Dog,1 month,Beef-flavored monthly chewable; broad-spectrum flea; heartworm and parasite control,Non-Vaccine,Oral,Preventative
+Seresto,Parasiticide,Fleas/Ticks,Imidacloprid/Flumethrin,Dog,8 months,Long-lasting collar providing 8 months continuous protection; convenient alternative to monthly treatments,Non-Vaccine,Collar,Preventative
+Seresto,Parasiticide,Fleas/Ticks,Imidacloprid/Flumethrin,Cat,8 months,8-month breakaway collar; safety design prevents choking; long-lasting flea and tick control,Non-Vaccine,Collar,Preventative
+Drontal Plus,Dewormer,Roundworms/Hookworms/Whipworms/Tapeworms,Praziquantel/Pyrantel/Febantel,Dog,Single dose,Broad-spectrum dewormer; repeat treatment in 2-4 weeks if needed,Non-Vaccine,Oral,Preventative
+Drontal Cat,Dewormer,Roundworms/Hookworms/Tapeworms,Praziquantel/Pyrantel,Cat,Single dose,Broad-spectrum cat dewormer; safe for kittens 4 weeks and older,Non-Vaccine,Oral,Preventative
+Panacur,Dewormer,Roundworms/Hookworms/Whipworms/Giardia,Fenbendazole,Dog,3 consecutive days,Administer for 3 consecutive days; repeat in 3 weeks if needed for persistent infections,Non-Vaccine,Oral,Preventative
+Panacur,Dewormer,Roundworms/Hookworms/Giardia,Fenbendazole,Cat,3 consecutive days,3-day treatment course; safe for pregnant animals; effective against Giardia parasites,Non-Vaccine,Oral,Preventative
+Droncit,Dewormer,Tapeworms,Praziquantel,Dog,Single dose,Specific tapeworm treatment; available as injectable or tablet form,Non-Vaccine,Oral/Injectable,Preventative
+Droncit,Dewormer,Tapeworms,Praziquantel,Cat,Single dose,Highly effective single-dose tapeworm treatment for cats,Non-Vaccine,Oral/Injectable,Preventative
+Strongid,Dewormer,Roundworms/Hookworms,Pyrantel Pamoate,Dog,Single dose,Available in liquid or tablet; repeat treatment 2-3 weeks after first dose,Non-Vaccine,Oral,Preventative
+Strongid,Dewormer,Roundworms/Hookworms,Pyrantel Pamoate,Cat,Single dose,Safe for young kittens; effective roundworm and hookworm treatment,Non-Vaccine,Oral,Preventative
+Profender,Dewormer,Roundworms/Hookworms/Tapeworms,Emodepside/Praziquantel,Cat,Single dose,Topical spot-on dewormer; no pilling required for cats; broad-spectrum coverage,Non-Vaccine,Topical,Preventative
+Bayer Quad,Dewormer,Roundworms/Hookworms/Whipworms/Tapeworms,Praziquantel/Pyrantel/Febantel,Dog,Single dose,Broad-spectrum chewable tablet dewormer; comprehensive parasite coverage,,,
+Nobivac Oral BC,Vaccine,Bordetella bronchiseptica/Parainfluenza,Oral Bordetella/Parainfluenza Vaccine,Dog,1 year,Non-invasive oral vaccine for kennel cough; rapid onset (3 hours); no needle required,Non-Core,Oral,Non-Core
+Vanguard Cromo,Vaccine,Coronavirus,Canine Coronavirus Vaccine,Dog,1 year,Non-core vaccine for canine coronavirus; recommended for high-risk environments,Non-Core,Subcutaneous Injection,Non-Core
+Nobivac GiardiaVax,Vaccine,Giardia lamblia,Giardia Vaccine,Dog,1 year,Non-core vaccine for Giardia; recommended for high-risk dogs; limited efficacy; requires 3-dose series,Non-Core,Subcutaneous Injection,Non-Core
+Felocell FIV,Vaccine,Feline Immunodeficiency Virus (FIV),FIV Vaccine,Cat,1 year,Controversial vaccine; may cause false-positive FIV tests; efficacy disputed; primarily for high-risk outdoor cats,Non-Core,Subcutaneous Injection,Non-Core
+Nobivac Feline Chlamydia,Vaccine,Chlamydia felis,Chlamydia Vaccine,Cat,1 year,Non-core vaccine; recommended for cats with respiratory disease risk; annual booster required,Non-Core,Subcutaneous Injection,Non-Core
+Nobivac FeST,Vaccine,Feline Leukemia Virus,FeLV Vaccine (Adjuvanted),Cat,1 year,Adjuvanted FeLV vaccine; alternative to non-adjuvanted versions; annual booster for outdoor cats,Non-Core,Subcutaneous Injection,Non-Core
+Nobivac Myxo,Vaccine,Myxomatosis,Myxomatosis Vaccine,Rabbit,1 year,Core vaccine for rabbits in endemic areas; protects against highly fatal myxomatosis virus,Core,Subcutaneous Injection,Core
+Imrab TN,Vaccine,Rabies,Rabies Vaccine (Ferret),Ferret,1 year,Core rabies vaccine for ferrets; only approved rabies vaccine in some jurisdictions; annual booster,Core,Subcutaneous Injection,Core
+Vanguard Plus 5L,Vaccine,DHPP + Leptospirosis,DA2PPL Vaccine,Dog,1 year,Combination vaccine with leptospirosis; alternative to separate leptospirosis vaccination,Core,Subcutaneous Injection,Core
+Nobivac Lepto DUO,Vaccine,Leptospirosis (2 serovars),Leptospira Vaccine DUO,Dog,1 year,Leptospirosis vaccine with 2 serovar coverage; recommended for low-risk areas,Non-Core,Subcutaneous Injection,Non-Core
+Recombitek KC Plus,Vaccine,Bordetella/Parainfluenza,Bordetella/Parainfluenza Vaccine,Dog,1 year,Recombinant KC vaccine with improved safety profile; recommended for high-risk dogs,Non-Core,Subcutaneous Injection,Non-Core
+Defensor 1,Vaccine,Rabies,Rabies Vaccine 1-Year,Dog,1 year,Single-year rabies vaccine; annual revaccination protocol,Core,Subcutaneous Injection,Core
+Defensor 3,Vaccine,Rabies,Rabies Vaccine 3-Year,Dog,3 years,Extended 3-year rabies protection; reduced vaccination frequency,Core,Subcutaneous Injection,Core
+PureVax RCP+F,Vaccine,FVRCP + Feline Leukemia,FVRCP + FeLV Vaccine,Cat,3 years,Non-adjuvanted combination vaccine with FVRCP and FeLV; 3-year duration; reduced injection site reactions,Core,Subcutaneous Injection,Core
+Purevax Rabies + FeLV,Vaccine,Rabies + Feline Leukemia,Rabies + FeLV Vaccine,Cat,1 year,Non-adjuvanted combination vaccine; reduces injection site sarcoma risk; annual protocol,Core,Subcutaneous Injection,Core
+Nobivac Myxo-RHD-VHD,Vaccine,Myxomatosis/RHD/VHD,Myxo-RHD-VHD Vaccine,Rabbit,1 year,Triple combination rabbit vaccine; protects against 3 major rabbit diseases; single injection,Core,Subcutaneous Injection,Core
+Filavax PMV,Vaccine,Paramyxovirus Type 1,PMV Vaccine,Pigeon,1 year,Enhanced PMV vaccine for pigeons; improved protection vs. standard formulations,Core,Injection,Core
+Columbovac Plus,Vaccine,Pigeon Pox + PMV,Pox-PMV Vaccine,Pigeon,1 year,Combination vaccine for pigeon pox and paramyxovirus; reduces injection frequency,Core,Wing-web Injection,Core
+Avian Polyomavirus Pro,Vaccine,Avian Polyomavirus,APV Vaccine (Enhanced),Parrot,1 year,Enhanced polyomavirus vaccine for parrots; improved efficacy; starting at 21 days of age,Non-Core,Subcutaneous Injection,Non-Core
+Vanguard 5L-CV,Vaccine,DHPP + CV + Leptospirosis,DA2PPv+CV+L Vaccine,Dog,3 years,Extended 3-year combination vaccine including coronavirus and leptospirosis,Core,Subcutaneous Injection,Core

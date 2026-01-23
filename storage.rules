@@ -1,0 +1,33 @@
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // User Avatars and Pet Images
+    // Path: users/{userId}/... or pets/{petId}/... 
+    // Ideally structure files under users/{userId}/... for easier rules
+    
+    // Allow users to read/write their own folder
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Allow access to pet images if the file metadata or path structure allows it.
+    // For simplicity in this app structure:
+    match /pets/{petId}/{fileName} {
+       allow read: if request.auth != null; // Allow auth users to see pets (e.g. provider viewing)
+       allow write: if request.auth != null; // In real app, check ownerId of Pet doc
+    }
+    
+    // Platform assets (public read)
+    match /platform/{allPaths=**} {
+      allow read: if true;
+      allow write: if false; // Admin only via console or specific admin tool
+    }
+  }
+}
