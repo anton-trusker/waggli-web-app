@@ -37,8 +37,7 @@ async function createAdminUser() {
                 }
 
                 if (signInData.user) {
-                    await updateUserProfileDB({
-                        id: signInData.user.id,
+                    await updateUserProfileDB(signInData.user.id, {
                         name: adminName,
                         email: adminEmail,
                         roles: ['admin'],
@@ -54,8 +53,7 @@ async function createAdminUser() {
             console.log('User created, updating profile...');
 
             // Update user profile to set admin role
-            await updateUserProfileDB({
-                id: signUpData.user.id,
+            await updateUserProfileDB(signUpData.user.id, {
                 name: adminName,
                 email: adminEmail,
                 roles: ['admin'],

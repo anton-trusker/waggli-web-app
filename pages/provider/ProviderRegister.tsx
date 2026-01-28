@@ -12,6 +12,7 @@ const ProviderRegister = () => {
     const [formData, setFormData] = useState({
         name: '',
         type: 'Vet',
+        customType: '',
         address: '',
         phone: '',
         email: '',
@@ -35,9 +36,13 @@ const ProviderRegister = () => {
             }
 
             // 2. Create Provider Profile
+            const typeDisplay = formData.type === 'Other' && formData.customType
+                ? formData.customType
+                : formData.type;
+
             await registerProvider({
                 name: formData.name,
-                type: formData.type,
+                type: typeDisplay,
                 address: formData.address,
                 phone: formData.phone,
                 email: formData.email,
@@ -76,8 +81,16 @@ const ProviderRegister = () => {
                                 onChange={e => setFormData({ ...formData, type: e.target.value })}
                                 className="w-full rounded-xl border-gray-200 dark:border-gray-700 p-3"
                             >
-                                {['Vet', 'Groomer', 'Boarding', 'Trainer', 'Walker'].map(t => <option key={t} value={t}>{t}</option>)}
+                                {['Vet', 'Groomer', 'Boarding', 'Trainer', 'Walker', 'Other'].map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
+                            {formData.type === 'Other' && (
+                                <input
+                                    value={formData.customType}
+                                    onChange={e => setFormData({ ...formData, customType: e.target.value })}
+                                    className="mt-3 w-full rounded-xl border-gray-200 dark:border-gray-700 p-3"
+                                    placeholder="Enter service type"
+                                />
+                            )}
                         </div>
                     </div>
 

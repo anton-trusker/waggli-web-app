@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, PropsWithChildren, useEffect } from 'react';
-import { translateText } from '../services/gemini';
-import { getSupportedLanguages, getTranslations } from '../services/db';
+import { generateBulkTranslations } from '../services/gemini';
+import { getSupportedLanguages, getTranslations, saveTranslationsBulk } from '../services/db';
 import { SupportedLanguage } from '../types';
 
 interface LocalizationContextType {
@@ -11,6 +11,7 @@ interface LocalizationContextType {
   t: (text: string) => string;
   isTranslating: boolean;
   refreshTranslations: () => void;
+  translateMissingKeys: () => Promise<void>;
 }
 
 const LocalizationContext = createContext<LocalizationContextType | undefined>(undefined);
@@ -69,6 +70,65 @@ export const LocalizationProvider: React.FC<PropsWithChildren<{}>> = ({ children
     setLanguages(langs);
   };
 
+  const translateMissingKeys = async () => {
+    if (language === 'en') return; // English is source
+    setIsTranslating(true);
+    try {
+      // 1. Identify missing
+      const missing: Record<string, string> = {};
+      // Use 'en' as source of truth for keys, or all keys in translations obj
+      Object.keys(translations).forEach(key => {
+        // If missing or empty in target language
+        if (!translations[key][language]) {
+          // Source is English translation OR key itself (if readable)
+          missing[key] = translations[key]['en'] || key;
+        }
+      });
+
+      const keysToTranslate = Object.keys(missing);
+      if (keysToTranslate.length === 0) {
+        console.log("No missing keys to translate");
+        return;
+      }
+
+      console.log(`Translating ${keysToTranslate.length} keys to ${language}...`);
+
+      // 2. Chunking (Batch of 20 to avoid large payload)
+      const chunkSize = 20;
+      const chunks = [];
+      for (let i = 0; i < keysToTranslate.length; i += chunkSize) {
+        chunks.push(keysToTranslate.slice(i, i + chunkSize));
+      }
+
+      // 3. Process Chunks
+      for (const chunkKeys of chunks) {
+        const batch: Record<string, string> = {};
+        chunkKeys.forEach(k => batch[k] = missing[k]);
+
+        const translatedBatch = await generateBulkTranslations(batch, language);
+
+        // 4. Update DB
+        const dbUpdates = Object.keys(translatedBatch).map(key => ({
+          key,
+          translations: {
+            ...translations[key], // Keep existing siblings
+            [language]: translatedBatch[key]
+          }
+        }));
+
+        await saveTranslationsBulk(dbUpdates);
+      }
+
+      // 5. Refresh Local
+      await refreshTranslations();
+
+    } catch (e) {
+      console.error("Auto-translation failed", e);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   const setLanguage = (lang: string) => {
     setLanguageState(lang);
     localStorage.setItem('app_language', lang);
@@ -95,7 +155,7 @@ export const LocalizationProvider: React.FC<PropsWithChildren<{}>> = ({ children
   };
 
   return (
-    <LocalizationContext.Provider value={{ language, languages, setLanguage, t, isTranslating, refreshTranslations }}>
+    <LocalizationContext.Provider value={{ language, languages, setLanguage, t, isTranslating, refreshTranslations, translateMissingKeys }}>
       {children}
     </LocalizationContext.Provider>
   );

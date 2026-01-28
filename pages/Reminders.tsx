@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Header from '../components/Header';
 import { useApp } from '../context/AppContext';
 import { Reminder } from '../types';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 interface RemindersProps {
     onMenuClick?: () => void;
@@ -9,6 +10,7 @@ interface RemindersProps {
 
 const Reminders: React.FC<RemindersProps> = ({ onMenuClick }) => {
     const { reminders, pets, addReminder, updateReminder, deleteReminder } = useApp();
+    const { permission, isSubscribed, subscribeToPush, loading: pushLoading } = usePushNotifications();
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState<Partial<Reminder>>({
@@ -78,9 +80,21 @@ const Reminders: React.FC<RemindersProps> = ({ onMenuClick }) => {
                         <h2 className="text-xl font-bold text-text-main-light dark:text-text-main-dark">To-Do List</h2>
                         <p className="text-sm text-text-muted-light dark:text-text-muted-dark">Manage daily tasks and care schedules.</p>
                     </div>
-                    <button onClick={handleAdd} className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all active:scale-95">
-                        <span className="material-icons-round text-xl">add_task</span> Add Task
-                    </button>
+                    <div className="flex gap-3">
+                        {!isSubscribed && permission !== 'denied' && (
+                            <button
+                                onClick={subscribeToPush}
+                                disabled={pushLoading}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-xl font-bold text-sm transition-all"
+                            >
+                                <span className="material-icons-round text-xl">{pushLoading ? 'refresh' : 'notifications'}</span>
+                                {pushLoading ? 'Enabling...' : 'Enable Notifications'}
+                            </button>
+                        )}
+                        <button onClick={handleAdd} className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all active:scale-95">
+                            <span className="material-icons-round text-xl">add_task</span> Add Task
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -252,8 +266,8 @@ const ReminderItem = ({ reminder, getPetName, onToggle, onEdit, isCompleted }: a
         <button
             onClick={(e) => { e.stopPropagation(); onToggle(); }}
             className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors ${isCompleted
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-primary'
+                ? 'bg-green-500 border-green-500 text-white'
+                : 'border-gray-300 dark:border-gray-600 hover:border-primary'
                 }`}
         >
             {isCompleted && <span className="material-icons-round text-sm">check</span>}

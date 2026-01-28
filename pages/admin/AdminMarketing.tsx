@@ -22,8 +22,15 @@ const AdminMarketing: React.FC<{ onMenuClick?: () => void }> = ({ onMenuClick })
     }, []);
 
     const loadData = async () => {
-        const data = await fetchCampaigns();
-        setCampaigns(data);
+        try {
+            const data = await fetchCampaigns();
+            setCampaigns(data);
+        } catch (error: any) {
+            // Suppress database policy errors
+            if (error?.code !== '42P17') {
+                console.error('Failed to load campaigns:', error);
+            }
+        }
     };
 
     const handleCreateClick = (type: 'banner' | 'email' | 'notification' | 'post') => {

@@ -13,7 +13,7 @@ interface HealthRecordsTabProps {
 }
 
 const HealthRecordsTab: React.FC<HealthRecordsTabProps> = ({ pet, onEditRecord, onViewRecord }) => {
-    const { vaccines, medications, activities } = useApp();
+    const { vaccines, medications, activities, medicalVisits } = useApp();
     const [healthFilterType, setHealthFilterType] = useState('All');
     const [healthDateStart, setHealthDateStart] = useState('');
     const [healthDateEnd, setHealthDateEnd] = useState('');
@@ -29,7 +29,7 @@ const HealthRecordsTab: React.FC<HealthRecordsTabProps> = ({ pet, onEditRecord, 
         const analyze = async () => {
             if (petVaccines.length > 0 && vaccineRecs.length === 0 && !analyzingRecs) {
                 setAnalyzingRecs(true);
-                const recs = await analyzeVaccineSchedule(pet, petVaccines);
+                const recs = await analyzeVaccineSchedule(petVaccines, pet);
                 setVaccineRecs(recs);
                 setAnalyzingRecs(false);
             }
@@ -40,35 +40,53 @@ const HealthRecordsTab: React.FC<HealthRecordsTabProps> = ({ pet, onEditRecord, 
     const timelineEvents = useMemo(() => {
         const events: any[] = [];
         const getDateObj = (d: string) => new Date(d);
-        
-        petVaccines.forEach(v => events.push({ 
-            id: v.id, dataType: 'vaccine', data: v, 
+
+        petVaccines.forEach(v => events.push({
+            id: v.id, dataType: 'vaccine', data: v,
             rawDate: getDateObj(v.date), dateDisplay: v.date,
-            title: `${v.type} Vaccination`, 
-            subtitle: `Manufacturer: ${v.manufacturer}`, 
-            type: 'Vaccination', icon: 'vaccines', 
-            bgClass: 'bg-green-100 dark:bg-green-900/20', colorClass: 'text-green-600 dark:text-green-400' 
+            title: `${v.type} Vaccination`,
+            subtitle: `Manufacturer: ${v.manufacturer}`,
+            type: 'Vaccination', icon: 'vaccines',
+            bgClass: 'bg-green-100 dark:bg-green-900/20', colorClass: 'text-green-600 dark:text-green-400'
         }));
-        
-        petMedications.forEach(m => events.push({ 
-            id: m.id, dataType: 'medication', data: m, 
+
+        petMedications.forEach(m => events.push({
+            id: m.id, dataType: 'medication', data: m,
             rawDate: getDateObj(m.startDate), dateDisplay: m.startDate,
-            title: `Started ${m.name}`, 
-            subtitle: `Dosage: ${m.frequency}`, 
-            type: 'Medication', icon: 'medication', 
-            bgClass: 'bg-blue-100 dark:bg-blue-900/20', colorClass: 'text-blue-600 dark:text-blue-400' 
+            title: `Started ${m.name}`,
+            subtitle: `Dosage: ${m.frequency}`,
+            type: 'Medication', icon: 'medication',
+            bgClass: 'bg-blue-100 dark:bg-blue-900/20', colorClass: 'text-blue-600 dark:text-blue-400'
         }));
-        
-        petActivities.forEach(a => events.push({ 
-            id: a.id, dataType: 'activity', data: a, 
-            rawDate: getDateObj(a.date), dateDisplay: a.date,
-            title: a.title, 
-            subtitle: a.description, 
-            type: a.type === 'vitals' ? 'Vitals' : a.type === 'checkup' ? 'Checkup' : 'Note', 
-            icon: a.icon || 'note', 
-            bgClass: a.colorClass?.split(' ')[0] || 'bg-gray-100', 
-            colorClass: a.colorClass?.split(' ')[1] || 'text-gray-600' 
+
+        // Medical visits are now from the top-level useApp() call
+        const petCheckups = medicalVisits?.filter(v => v.petId === pet.id) || [];
+
+        petCheckups.forEach(c => events.push({
+            id: c.id, dataType: 'medical_visit', data: c,
+            rawDate: getDateObj(c.date), dateDisplay: c.date,
+            title: c.reason,
+            subtitle: `Clinic: ${c.clinicName}. Diagnosis: ${c.diagnosis || 'None'}`,
+            type: 'Checkup', icon: 'medical_services',
+            bgClass: 'bg-purple-100 dark:bg-purple-900/20', colorClass: 'text-purple-600 dark:text-purple-400'
         }));
+
+        petActivities.forEach(a => {
+            // Filter out old checkups if migrating, or keep legacy. 
+            // For now, keep everything but maybe distinguish visual
+            if (a.type !== 'checkup') {
+                events.push({
+                    id: a.id, dataType: 'activity', data: a,
+                    rawDate: getDateObj(a.date), dateDisplay: a.date,
+                    title: a.title,
+                    subtitle: a.description,
+                    type: a.type === 'vitals' ? 'Vitals' : 'Note',
+                    icon: a.icon || 'note',
+                    bgClass: a.colorClass?.split(' ')[0] || 'bg-gray-100',
+                    colorClass: a.colorClass?.split(' ')[1] || 'text-gray-600'
+                })
+            }
+        });
 
         let filtered = events.sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
         if (healthFilterType !== 'All') filtered = filtered.filter(e => e.type === healthFilterType);
@@ -76,18 +94,18 @@ const HealthRecordsTab: React.FC<HealthRecordsTabProps> = ({ pet, onEditRecord, 
         if (healthDateEnd) filtered = filtered.filter(e => e.rawDate <= new Date(healthDateEnd));
 
         return filtered;
-    }, [petVaccines, petMedications, petActivities, healthFilterType, healthDateStart, healthDateEnd]);
+    }, [petVaccines, petMedications, petActivities, medicalVisits, healthFilterType, healthDateStart, healthDateEnd]);
 
-    const ageValue = pet.age.replace(/[^\d.]/g, '');
-    const ageUnit = pet.age.includes('m') ? 'mos' : 'yrs';
+    const ageValue = (pet.age || '').replace(/[^\d.]/g, '') || '0';
+    const ageUnit = (pet.age || '').includes('m') ? 'mos' : 'yrs';
 
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <HealthMetricCard icon="monitor_weight" label="Weight" value={pet.weight} subValue="Stable" color="blue" trend="flat"/>
-                <HealthMetricCard icon="straighten" label="Height" value={pet.height || '--'} subValue={pet.height ? 'Last Recorded' : 'Not Set'} color="purple"/>
-                <HealthMetricCard icon="bloodtype" label="Blood Type" value={pet.bloodType?.split(' ')[0] || '?'} subValue={pet.bloodType?.split(' ').slice(1).join(' ') || 'Unknown'} color="red"/>
-                <HealthMetricCard icon="calendar_month" label="Age" value={ageValue} subValue={ageUnit === 'yrs' ? 'Years Old' : 'Months Old'} color="orange"/>
+                <HealthMetricCard icon="monitor_weight" label="Weight" value={pet.weight} subValue="Stable" color="blue" trend="flat" />
+                <HealthMetricCard icon="straighten" label="Height" value={pet.height || '--'} subValue={pet.height ? 'Last Recorded' : 'Not Set'} color="purple" />
+                <HealthMetricCard icon="bloodtype" label="Blood Type" value={pet.bloodType?.split(' ')[0] || '?'} subValue={pet.bloodType?.split(' ').slice(1).join(' ') || 'Unknown'} color="red" />
+                <HealthMetricCard icon="calendar_month" label="Age" value={ageValue} subValue={ageUnit === 'yrs' ? 'Years Old' : 'Months Old'} color="orange" />
             </div>
 
             {/* AI VACCINE RECOMMENDATIONS */}
@@ -107,11 +125,10 @@ const HealthRecordsTab: React.FC<HealthRecordsTabProps> = ({ pet, onEditRecord, 
                                     <div key={idx} className="bg-white/60 dark:bg-black/20 backdrop-blur-sm p-3 rounded-xl border border-indigo-100 dark:border-indigo-800/30">
                                         <div className="flex justify-between items-start mb-1">
                                             <span className="font-bold text-indigo-900 dark:text-indigo-100 text-sm">{rec.vaccine}</span>
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                                                rec.status === 'Overdue' ? 'bg-red-100 text-red-700' :
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${rec.status === 'Overdue' ? 'bg-red-100 text-red-700' :
                                                 rec.status === 'Due Soon' ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-green-100 text-green-700'
-                                            }`}>{rec.status}</span>
+                                                    'bg-green-100 text-green-700'
+                                                }`}>{rec.status}</span>
                                         </div>
                                         <p className="text-xs text-indigo-800 dark:text-indigo-200 leading-relaxed">{rec.recommendation}</p>
                                     </div>
@@ -190,7 +207,7 @@ const HealthRecordsTab: React.FC<HealthRecordsTabProps> = ({ pet, onEditRecord, 
                         Medical Notes & Activity
                     </h3>
                     <div className="flex gap-3">
-                        <select 
+                        <select
                             value={healthFilterType}
                             onChange={(e) => setHealthFilterType(e.target.value)}
                             className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium focus:ring-1 focus:ring-primary outline-none"

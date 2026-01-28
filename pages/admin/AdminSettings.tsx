@@ -6,17 +6,28 @@ import { useLocalization } from '../../context/LocalizationContext';
 import { updatePlatformSettings, getAllLanguages, updateLanguageStatus, getTranslations, saveTranslation } from '../../services/db';
 import { uploadFile } from '../../services/storage';
 import { generateBulkTranslations } from '../../services/gemini';
-import { TranslationItem, SupportedLanguage } from '../../types';
+import { TranslationItem, SupportedLanguage, PlatformSettings } from '../../types';
 import { AuditLogViewer } from '../../components/admin/AuditLogViewer';
 
 const AdminSettings: React.FC = () => {
     const { settings, updateLocalSettings } = usePlatform();
     const { refreshTranslations } = useLocalization();
-    const [activeTab, setActiveTab] = useState<'Branding' | 'Localization' | 'Modules' | 'Audit Logs'>('Branding');
+    const [activeTab, setActiveTab] = useState<'general' | 'localization' | 'seo' | 'modules' | 'audit_logs'>('general');
     const [loading, setLoading] = useState(false);
 
     // Branding State
-    const [brandForm, setBrandForm] = useState(settings);
+    const [brandForm, setBrandForm] = useState<PlatformSettings>(() => ({
+        id: settings?.id || '',
+        platformName: settings?.platformName || '',
+        logo_url: settings?.logo_url || '',
+        favicon_url: settings?.favicon_url || '',
+        icon_url: settings?.icon_url || '',
+        ai_icon_url: settings?.ai_icon_url,
+        primaryColor: settings?.primaryColor || '#4f46e5',
+        modules: settings?.modules,
+        features: settings?.features,
+        updatedAt: settings?.updatedAt
+    }));
     const logoInputRef = useRef<HTMLInputElement>(null);
     const iconInputRef = useRef<HTMLInputElement>(null);
     const aiIconInputRef = useRef<HTMLInputElement>(null);
@@ -28,8 +39,8 @@ const AdminSettings: React.FC = () => {
     const [isTranslating, setIsTranslating] = useState(false);
 
     useEffect(() => {
-        if (activeTab === 'Branding') setBrandForm(settings);
-        if (activeTab === 'Localization') loadLocalizationData();
+        if (activeTab === 'general' && settings) setBrandForm(prev => ({ ...prev, ...settings }));
+        if (activeTab === 'localization') loadLocalizationData();
     }, [activeTab, settings]);
 
     const loadLocalizationData = async () => {
@@ -78,8 +89,13 @@ const AdminSettings: React.FC = () => {
         // Get active target languages (exclude English)
         const targets = allLanguages.filter(l => l.isActive && l.code !== 'en').map(l => l.code);
 
-        // AI Translate
-        const aiResults = await generateBulkTranslations(newKey, targets);
+        // AI Translate per target language
+        const aiResults: Record<string, string> = {};
+        for (const lang of targets) {
+            const translated = await generateBulkTranslations({ text: newKey }, lang);
+            const firstKey = Object.keys(translated)[0];
+            aiResults[lang] = firstKey ? translated[firstKey] : newKey;
+        }
 
         const newEntry = {
             en: newKey,
@@ -96,40 +112,33 @@ const AdminSettings: React.FC = () => {
     return (
         <>
             <Header onMenuClick={() => { }} title="Global Settings" />
-            <div className="p-6 md:p-10 max-w-7xl mx-auto w-full space-y-8">
+            <div className="p-6 max-w-7xl mx-auto space-y-6">
 
-                {/* Tabs */}
-                <div className="flex gap-6 border-b border-gray-200 dark:border-gray-800 overflow-x-auto pb-1">
-                    {['Branding', 'Localization', 'Modules', 'Audit Logs'].map(tab => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab as any)}
-                            className={`pb-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'
-                                }`}
-                        >
-                            {tab}
-                        </button>
-                    ))}
+                {/* TABS */}
+                <div className="flex gap-4 border-b border-gray-100 dark:border-gray-800">
+                    <button onClick={() => setActiveTab('general')} className={`pb-3 px-2 text-sm font-bold ${activeTab === 'general' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}>Branding & General</button>
+                    <button onClick={() => setActiveTab('localization')} className={`pb-3 px-2 text-sm font-bold ${activeTab === 'localization' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}>Localization</button>
+                    <button onClick={() => setActiveTab('seo')} className={`pb-3 px-2 text-sm font-bold ${activeTab === 'seo' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}>SEO</button>
+                    <button onClick={() => setActiveTab('modules')} className={`pb-3 px-2 text-sm font-bold ${activeTab === 'modules' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}>Modules</button>
+                    <button onClick={() => setActiveTab('audit_logs')} className={`pb-3 px-2 text-sm font-bold ${activeTab === 'audit_logs' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}>Audit Logs</button>
                 </div>
 
-                {activeTab === 'Branding' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in">
-                        <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-3xl border border-gray-100 dark:border-gray-800 space-y-6">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Visual Identity</h3>
-
+                {/* GENERAL TAB */}
+                {activeTab === 'general' && (
+                    <div className="bg-white dark:bg-surface-dark rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 space-y-6">
+                        <h2 className="text-xl font-bold dark:text-white">Branding</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Platform Name</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Platform Name</label>
                                 <input
-                                    type="text"
-                                    value={brandForm.platformName}
+                                    value={brandForm.platformName || ''}
                                     onChange={(e) => setBrandForm({ ...brandForm, platformName: e.target.value })}
-                                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full bg-gray-50 dark:bg-gray-800 border rounded-xl px-4 py-2"
                                 />
                             </div>
-
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Primary Color</label>
-                                <div className="flex gap-3">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Primary Color (Hex)</label>
+                                <div className="flex gap-2">
                                     <input
                                         type="color"
                                         value={brandForm.primaryColor}
@@ -202,7 +211,7 @@ const AdminSettings: React.FC = () => {
                     </div>
                 )}
 
-                {activeTab === 'Localization' && (
+                {activeTab === 'localization' && (
                     <div className="space-y-8 animate-in fade-in">
 
                         {/* Language Toggles */}
@@ -291,7 +300,7 @@ const AdminSettings: React.FC = () => {
                 )}
 
                 {/* --- MODULES TAB --- */}
-                {activeTab === 'Modules' && (
+                {activeTab === 'modules' && (
                     <div className="animate-in fade-in space-y-8">
                         <div className="bg-surface-light dark:bg-surface-dark p-8 rounded-3xl border border-gray-100 dark:border-gray-800">
                             <div className="flex justify-between items-start mb-6">
@@ -343,7 +352,7 @@ const AdminSettings: React.FC = () => {
                 )}
 
                 {/* --- AUDIT LOGS TAB --- */}
-                {activeTab === 'Audit Logs' && (
+                {activeTab === 'audit_logs' && (
                     <div className="animate-in fade-in">
                         <AuditLogViewer />
                     </div>

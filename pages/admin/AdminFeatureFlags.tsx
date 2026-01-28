@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFeatureFlags } from '../../context/FeatureFlagContext';
-import { supabase } from '../../services/supabase';
 import toast from 'react-hot-toast';
+import { updateFeatureConfig } from '../../services/adminService';
 
 const AdminFeatureFlags: React.FC = () => {
     const { features, refreshFeatures } = useFeatureFlags();
@@ -13,13 +13,7 @@ const AdminFeatureFlags: React.FC = () => {
         setUpdating(moduleKey);
 
         try {
-            const { error } = await supabase
-                .from('feature_flags')
-                .update({ is_enabled: !currentState })
-                .eq('module_key', moduleKey);
-
-            if (error) throw error;
-
+            await updateFeatureConfig(moduleKey, { is_enabled: !currentState });
             toast.success(`Feature ${!currentState ? 'enabled' : 'disabled'} successfully`);
             await refreshFeatures();
         } catch (error: any) {
@@ -32,13 +26,7 @@ const AdminFeatureFlags: React.FC = () => {
 
     const toggleComingSoon = async (moduleKey: string, currentState: boolean) => {
         try {
-            const { error } = await supabase
-                .from('feature_flags')
-                .update({ show_coming_soon: !currentState })
-                .eq('module_key', moduleKey);
-
-            if (error) throw error;
-
+            await updateFeatureConfig(moduleKey, { show_coming_soon: !currentState });
             toast.success(`Coming Soon ${!currentState ? 'enabled' : 'hidden'}`);
             await refreshFeatures();
         } catch (error: any) {
@@ -134,8 +122,8 @@ const AdminFeatureFlags: React.FC = () => {
                                         onClick={() => toggleFeature(feature.module_key, feature.is_enabled)}
                                         disabled={!feature.can_be_disabled || updating === feature.module_key}
                                         className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${feature.is_enabled
-                                                ? 'bg-green-500'
-                                                : 'bg-gray-300 dark:bg-gray-600'
+                                            ? 'bg-green-500'
+                                            : 'bg-gray-300 dark:bg-gray-600'
                                             } ${!feature.can_be_disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                                         title={!feature.can_be_disabled ? 'This feature cannot be disabled' : ''}
                                     >
@@ -146,8 +134,8 @@ const AdminFeatureFlags: React.FC = () => {
                                     </button>
 
                                     <span className={`text-xs font-semibold ${feature.is_enabled
-                                            ? 'text-green-600 dark:text-green-400'
-                                            : 'text-gray-500 dark:text-gray-400'
+                                        ? 'text-green-600 dark:text-green-400'
+                                        : 'text-gray-500 dark:text-gray-400'
                                         }`}>
                                         {updating === feature.module_key ? 'Updating...' : feature.is_enabled ? 'On' : 'Off'}
                                     </span>
@@ -160,8 +148,8 @@ const AdminFeatureFlags: React.FC = () => {
                                         <button
                                             onClick={() => toggleComingSoon(feature.module_key, feature.show_coming_soon)}
                                             className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 cursor-pointer ${feature.show_coming_soon
-                                                    ? 'bg-yellow-500'
-                                                    : 'bg-gray-300 dark:bg-gray-600'
+                                                ? 'bg-yellow-500'
+                                                : 'bg-gray-300 dark:bg-gray-600'
                                                 }`}
                                         >
                                             <span
@@ -171,8 +159,8 @@ const AdminFeatureFlags: React.FC = () => {
                                         </button>
 
                                         <span className={`text-xs font-semibold ${feature.show_coming_soon
-                                                ? 'text-yellow-600 dark:text-yellow-400'
-                                                : 'text-gray-500 dark:text-gray-400'
+                                            ? 'text-yellow-600 dark:text-yellow-400'
+                                            : 'text-gray-500 dark:text-gray-400'
                                             }`}>
                                             {feature.show_coming_soon ? 'Show' : 'Hide'}
                                         </span>

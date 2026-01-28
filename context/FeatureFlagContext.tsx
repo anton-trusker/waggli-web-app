@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, PropsWithChildren } from 'react';
 import { supabase } from '../services/supabase';
+import { useApp } from './AppContext';
 
 export interface FeatureFlag {
     module_key: string;
@@ -101,14 +102,15 @@ export const FeatureFlagProvider: React.FC<PropsWithChildren<{}>> = ({ children 
 
     const canUserAccess = (key: string): boolean => {
         const feature = features[key];
+        const { user } = useApp();
+
         if (!feature) return false;
         if (!feature.is_enabled) return false;
 
-        // TODO: Check user subscription if feature requires it
-        // if (feature.requires_subscription?.length > 0) {
-        //   const userSubscription = getUserSubscription();
-        //   return feature.requires_subscription.includes(userSubscription);
-        // }
+        if (feature.requires_subscription && feature.requires_subscription.length > 0) {
+            const userPlan = user.plan || 'Free';
+            return feature.requires_subscription.includes(userPlan);
+        }
 
         return true;
     };

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { ServiceProvider, Service } from '../types';
+import { ServiceProvider } from '../types';
 
 export const getServiceProviders = async (category?: string): Promise<ServiceProvider[]> => {
     let query = supabase.from('service_providers').select(`
@@ -21,12 +21,15 @@ export const getServiceProviders = async (category?: string): Promise<ServicePro
     }
 
     // Map DB to Type
-    return (data || []).map(p => ({
+    return (data || []).map((p: any): ServiceProvider => ({
         id: p.id,
+        ownerId: p.owner_id,
         name: p.name,
-        type: p.type || 'General',
-        rating: p.rating || 0,
-        reviews: p.review_count || 0,
+        type: p.type,
+        category: p.category,
+        rating: p.rating,
+        reviews: p.reviews,
+        distance: p.distance,
         address: p.address,
         phone: p.phone,
         email: p.email,
@@ -35,7 +38,7 @@ export const getServiceProviders = async (category?: string): Promise<ServicePro
         website: p.website,
         googlePlaceId: p.google_place_id,
         isVerified: p.is_verified,
-        services: p.services?.map((s: any) => ({
+        servicesList: p.services?.map((s: any) => ({
             id: s.id,
             name: s.name,
             providerId: p.id,
@@ -43,7 +46,13 @@ export const getServiceProviders = async (category?: string): Promise<ServicePro
             duration: s.duration,
             description: s.description,
             category: s.category
-        })) || []
+        })) || [],
+        latitude: p.latitude,
+        longitude: p.longitude,
+        isOpen: p.is_open,
+        tags: p.tags,
+        source: p.source,
+        joinedDate: p.joined_date
     }));
 };
 
@@ -60,10 +69,13 @@ export const getProviderById = async (id: string): Promise<ServiceProvider | nul
 
     return {
         id: data.id,
+        ownerId: data.owner_id,
         name: data.name,
-        type: data.type || 'General',
-        rating: data.rating || 0,
-        reviews: data.review_count || 0,
+        type: data.type,
+        category: data.category,
+        rating: data.rating,
+        reviews: data.reviews,
+        distance: data.distance,
         address: data.address,
         phone: data.phone,
         email: data.email,
@@ -72,7 +84,7 @@ export const getProviderById = async (id: string): Promise<ServiceProvider | nul
         website: data.website,
         googlePlaceId: data.google_place_id,
         isVerified: data.is_verified,
-        services: data.services?.map((s: any) => ({
+        servicesList: data.services?.map((s: any) => ({
             id: s.id,
             name: s.name,
             providerId: data.id,
@@ -80,8 +92,14 @@ export const getProviderById = async (id: string): Promise<ServiceProvider | nul
             duration: s.duration,
             description: s.description,
             category: s.category
-        })) || []
-    };
+        })) || [],
+        latitude: data.latitude,
+        longitude: data.longitude,
+        isOpen: data.is_open,
+        tags: data.tags,
+        source: data.source,
+        joinedDate: data.joined_date
+    } as ServiceProvider;
 };
 
 export const registerProvider = async (providerData: Partial<ServiceProvider>, userId: string) => {

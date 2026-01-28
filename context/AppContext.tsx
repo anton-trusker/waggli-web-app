@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, PropsWithChildren, useEffect } from 'react';
-import { User, Pet, Appointment, Document, VaccineRecord, Medication, Activity, HealthStat, Reminder, Notification, ServiceProvider, AppointmentStatus, StaticData } from '../types';
+import { MedicalVisit, User, Pet, Appointment, PetDocument, VaccineRecord, Medication, Activity, HealthStat, Reminder, Notification, ServiceProvider, AppointmentStatus, StaticData, UserRole } from '../types';
 import { supabase, getUserProfile as getSupabaseUserProfile, updateUserProfile as updateSupabaseUserProfile } from '../services/supabase';
 import {
     createUserProfile,
@@ -9,6 +9,7 @@ import {
     subscribeToCollection,
     addPetToDB,
     updatePetInDB,
+    deletePetDB,
     getStaticData,
     registerProviderDB,
     getProviderByOwnerId,
@@ -20,11 +21,23 @@ import {
     addVaccineDB, updateVaccineDB, deleteVaccineDB,
     addMedicationDB, updateMedicationDB, deleteMedicationDB,
     addReminderDB, updateReminderDB, deleteReminderDB,
+
+    getNotifications, createNotification, updateNotification, markNotificationRead as markNotificationReadDB, markAllNotificationsRead as markAllNotificationsReadDB, deleteNotification,
     addActivityDB,
+    addMedicalVisitDB, updateMedicalVisitDB, deleteMedicalVisitDB,
     addDocumentDB, deleteDocumentDB
 } from '../services/db';
 import { uploadBase64, deleteFile } from '../services/storage';
-import { mapDbUserToAppUser } from '../utils/mappers';
+import {
+    mapDbUserToAppUser,
+    mapAppUserToDbUser,
+    mapDbPetToAppPet,
+    mapDbAppointmentToAppAppointment,
+    mapDbVaccineToAppVaccine,
+    mapDbMedicationToAppMedication,
+    mapDbReminderToAppReminder
+} from '../utils/mappers';
+import { checkVaccineDueNotifications, checkMedicationRefillNotifications, checkAppointmentNotifications, generateAllNotifications } from '../utils/notificationGenerator';
 import type { Session } from '@supabase/supabase-js';
 
 interface AppContextType {
@@ -35,12 +48,13 @@ interface AppContextType {
     appointments: Appointment[];
     providerAppointments: Appointment[];
     reminders: Reminder[];
-    documents: Document[];
+    documents: PetDocument[];
     vaccines: VaccineRecord[];
     medications: Medication[];
     activities: Activity[];
     healthStats: HealthStat[];
     notifications: Notification[];
+    medicalVisits: MedicalVisit[];
     services: ServiceProvider[];
     favoriteServiceIds: string[];
     providerProfile: ServiceProvider | null;
@@ -51,9 +65,9 @@ interface AppContextType {
     completeOnboarding: (userData: Partial<User>) => Promise<void>;
     logout: () => void;
 
-    addPet: (pet: Pet) => void;
-    updatePet: (pet: Pet) => void;
-    deletePet: (id: string) => void;
+    addPet: (pet: Pet) => Promise<Pet>;
+    updatePet: (pet: Pet) => Promise<void | Pet>;
+    deletePet: (id: string) => Promise<void>;
 
     toggleAdminMode: () => void;
     providerLogin: (email: string, pass: string) => Promise<void>;
@@ -66,7 +80,7 @@ interface AppContextType {
     updateAppointmentStatus: (id: string, status: AppointmentStatus) => void;
     deleteAppointment: (id: string) => void;
 
-    addDocument: (doc: Document) => void;
+    addDocument: (doc: PetDocument) => void;
     deleteDocument: (id: string) => void;
 
     addVaccine: (vax: VaccineRecord) => void;
@@ -76,9 +90,10 @@ interface AppContextType {
     updateMedication: (med: Medication) => void;
 
     addActivity: (act: Activity) => void;
+    addMedicalVisit: (visit: MedicalVisit) => Promise<void>;
     saveHealthRecord: (petId: string, type: string, title: string, data: any) => Promise<void>;
 
-    fetchPetAIInsights: (petId: string) => Promise<any[]>;
+    fetchPetAIInsights: (petId: string, type?: string) => Promise<any[]>;
 
     addReminder: (reminder: Reminder) => void;
     updateReminder: (reminder: Reminder) => void;
@@ -115,8 +130,9 @@ export const AppProvider = ({ children }: PropsWithChildren<{}>) => {
     const [reminders, setReminders] = useState<Reminder[]>([]);
     const [vaccines, setVaccines] = useState<VaccineRecord[]>([]);
     const [medications, setMedications] = useState<Medication[]>([]);
+    const [medicalVisits, setMedicalVisits] = useState<MedicalVisit[]>([]);
     const [activities, setActivities] = useState<Activity[]>([]);
-    const [documents, setDocuments] = useState<Document[]>([]);
+    const [documents, setDocuments] = useState<PetDocument[]>([]);
 
     const [healthStats, setHealthStats] = useState<HealthStat[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -160,18 +176,81 @@ export const AppProvider = ({ children }: PropsWithChildren<{}>) => {
         };
     }, []);
 
+    // Subscribe to Pets
+    useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+        if (user.id && isAuthenticated) {
+            unsubscribe = subscribeToPets(user.id, (data) => {
+                setPets(data);
+            });
+        }
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [user.id, isAuthenticated]);
+
+    // Subscribe to Appointments
+    useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+        if (user.id && isAuthenticated) {
+            unsubscribe = subscribeToCollection<Appointment>('appointments', 'owner_id', user.id, (data) => {
+                setAppointments(data);
+            }, mapDbAppointmentToAppAppointment);
+        }
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [user.id, isAuthenticated]);
+
     // Subscribe to Provider Appointments when profile is loaded
     useEffect(() => {
         let unsubscribe: (() => void) | undefined;
         if (providerProfile?.id) {
             unsubscribe = subscribeToCollection<Appointment>('appointments', 'provider_id', providerProfile.id, (data) => {
                 setProviderAppointments(data);
-            });
+            }, mapDbAppointmentToAppAppointment);
         }
         return () => {
             if (unsubscribe) unsubscribe();
         };
     }, [providerProfile]);
+
+    // Subscribe to Notifications when user is authenticated
+    useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+        if (user.id && isAuthenticated) {
+            // Use user_id as confirmed by DB schema check
+            unsubscribe = subscribeToCollection<Notification>('notifications', 'user_id', user.id, (data) => {
+                setNotifications(data);
+            });
+        }
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [user.id, isAuthenticated]);
+
+    // Subscribe to Reminders
+    useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+        if (user.id && isAuthenticated) {
+            unsubscribe = subscribeToCollection<Reminder>('reminders', 'owner_id', user.id, setReminders, mapDbReminderToAppReminder);
+        }
+        return () => { if (unsubscribe) unsubscribe(); };
+    }, [user.id, isAuthenticated]);
+
+    // INTELLIGENT NOTIFICATION SYSTEM
+    useEffect(() => {
+        if (user.id && isAuthenticated && pets.length > 0) {
+            // Run health gap analysis
+            generateAllNotifications({
+                pet: pets[0], // Focus on primary pet for now, or iterate all in future
+                vaccines,
+                medications,
+                appointments,
+                lastWeightLogDate: activities.find(a => a.type === 'vitals')?.date
+            }, user.id);
+        }
+    }, [user.id, isAuthenticated, pets, vaccines, medications, appointments, activities]);
 
     // Helper function to handle user session
 
@@ -275,29 +354,30 @@ export const AppProvider = ({ children }: PropsWithChildren<{}>) => {
 
     // --- Data Operations ---
 
-    const addPet = async (pet: Pet) => {
+    const addPet = async (pet: Pet): Promise<Pet> => {
         if (pet.image && pet.image.startsWith('data:')) {
             try {
                 const url = await uploadBase64(pet.image, `pets/${user.id}/avatars`);
                 pet.image = url;
             } catch (e) { console.error("Upload failed", e); }
         }
-        addPetToDB({ ...pet, ownerId: user.id });
+        const savedPet = await addPetToDB({ ...pet, ownerId: user.id });
+        return savedPet;
     };
 
-    const updatePet = async (pet: Pet) => {
+    const updatePet = async (pet: Pet): Promise<void | Pet> => {
         if (pet.image && pet.image.startsWith('data:')) {
             const url = await uploadBase64(pet.image, `pets/${pet.id}/avatars`);
             pet.image = url;
         }
-        updatePetInDB(pet);
+        return await updatePetInDB(pet);
     };
 
-    const deletePet = async (id: string) => {
+    const deletePet = async (id: string): Promise<void> => {
         await deletePetDB(id);
     };
 
-    const addDocument = async (d: Document) => {
+    const addDocument = async (d: PetDocument) => {
         await addDocumentDB({ ...d, ownerId: user.id });
     };
 
@@ -312,10 +392,12 @@ export const AppProvider = ({ children }: PropsWithChildren<{}>) => {
     const registerAsProvider = async (p: ServiceProvider) => {
         await registerProviderDB({ ...p, ownerId: user.id });
 
-        const newRoles = user.roles.includes('provider') ? user.roles : [...user.roles, 'provider'];
+        const newRoles: UserRole[] = user.roles && user.roles.includes('provider')
+            ? user.roles
+            : [...(user.roles || []), 'provider'];
         await updateUserProfileDB(user.id, { roles: newRoles });
 
-        setUser(prev => ({ ...prev, roles: newRoles }));
+        setUser(prev => ({ ...(prev as User), roles: newRoles }));
         setProviderProfile(p);
     };
 
@@ -326,8 +408,8 @@ export const AppProvider = ({ children }: PropsWithChildren<{}>) => {
 
     // AI Persistence
     const saveHealthRecord = async (petId: string, type: string, title: string, data: any) => {
-        if (type === 'ai_insight' || type === 'symptom_analysis') {
-            await saveAIInsightDB(petId, { title, summary: data.summary || data.explanation, ...data });
+        if (type === 'ai_insight' || type === 'symptom_analysis' || type === 'ai_news') {
+            await saveAIInsightDB(petId, { title, summary: data.summary || data.explanation, ...data }, type);
         } else {
             const act: Activity = {
                 id: Date.now().toString(), petId, type, title,
@@ -338,22 +420,27 @@ export const AppProvider = ({ children }: PropsWithChildren<{}>) => {
         }
     };
 
-    const fetchPetAIInsights = async (petId: string) => {
-        return await fetchAIInsightsDB(petId);
+    const fetchPetAIInsights = async (petId: string, type: string = 'ai_insight') => {
+        return await fetchAIInsightsDB(petId, type);
     };
 
     // Standard CRUD Wrappers
     const updateUser = async (u: User) => {
         if (!u.id) return;
-        await updateUserProfileDB(u.id, u);
+        const dbUser = mapAppUserToDbUser(u);
+        await updateUserProfileDB(u.id, dbUser);
         setUser(u);
     };
 
     const addAppointment = async (a: Appointment) => {
         await addAppointmentDB({ ...a, ownerId: user.id });
+        // Auto-generate appointment reminder notifications
+        checkAppointmentNotifications([a], user.id).catch(console.error);
     };
     const updateAppointment = async (a: Appointment) => {
         await updateAppointmentDB(a);
+        // Re-check appointment notifications
+        checkAppointmentNotifications([a], user.id).catch(console.error);
     };
     const updateAppointmentStatus = async (id: string, status: 'Scheduled' | 'Pending' | 'Confirmed' | 'Cancelled' | 'Completed') => {
         // We need to fetch the appointment first or just update the field. 
@@ -375,20 +462,33 @@ export const AppProvider = ({ children }: PropsWithChildren<{}>) => {
 
     const addVaccine = async (v: VaccineRecord) => {
         await addVaccineDB({ ...v, ownerId: user.id });
+        // Auto-generate vaccine reminder notifications
+        checkVaccineDueNotifications([v], user.id).catch(console.error);
     };
     const updateVaccine = async (v: VaccineRecord) => {
         await updateVaccineDB(v);
+        // Re-check vaccine notifications
+        checkVaccineDueNotifications([v], user.id).catch(console.error);
     };
 
     const addMedication = async (m: Medication) => {
         await addMedicationDB({ ...m, ownerId: user.id });
+        // Auto-generate medication refill notifications
+        checkMedicationRefillNotifications([m], user.id).catch(console.error);
     };
     const updateMedication = async (m: Medication) => {
         await updateMedicationDB(m);
+        // Re-check medication notifications
+        checkMedicationRefillNotifications([m], user.id).catch(console.error);
     };
 
     const addActivity = async (a: Activity) => {
-        await addActivityDB({ ...a, ownerId: user.id });
+        await addActivityDB({ ...a, ownerId: user.id } as any);
+    };
+
+    const addMedicalVisit = async (visit: MedicalVisit) => {
+        await addMedicalVisitDB(visit);
+        // Optimistic update or refetch logic here
     };
 
     const addReminder = async (r: Reminder) => {
@@ -402,22 +502,79 @@ export const AppProvider = ({ children }: PropsWithChildren<{}>) => {
     };
 
     const toggleAdminMode = () => setIsAdminMode(!isAdminMode);
-    const markNotificationRead = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    const markAllNotificationsRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+    const markNotificationRead = async (id: string) => {
+        try {
+            await markNotificationReadDB(id);
+            // Subscription will update state automatically
+        } catch (e) {
+            console.error('Failed to mark notification as read:', e);
+        }
+    };
+
+    const markAllNotificationsRead = async () => {
+        try {
+            await markAllNotificationsReadDB(user.id);
+            // Subscription will update state automatically
+        } catch (e) {
+            console.error('Failed to mark all notifications as read:', e);
+        }
+    };
+
     const toggleServiceFavorite = (id: string) => setFavoriteServiceIds(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
-    const searchServices = async () => { };
+    const searchServices = async (category: string, location: string, lat: number, lng: number) => {
+        try {
+            const { data, error } = await supabase.functions.invoke('google-places-search', {
+                body: { category, lat, lng }
+            });
+
+            if (error) throw error;
+
+            if (data?.results) {
+                const mapped: ServiceProvider[] = data.results.map((r: any) => ({
+                    id: 'google-' + r.place_id,
+                    name: r.name,
+                    category: category as any,
+                    address: r.address,
+                    phone: r.formatted_phone,
+                    website: r.website,
+                    rating: r.rating,
+                    reviews: r.review_count,
+                    latitude: r.lat,
+                    longitude: r.lng,
+                    image: r.photos?.length > 0 && typeof r.photos[0] === 'string'
+                        ? r.photos[0]
+                        : 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=300&auto=format&fit=crop',
+                    isOpen: r.opening_hours?.open_now || false,
+                    source: 'google' as const,
+                    isVerified: false,
+                    joinedDate: new Date().toISOString(),
+                    type: 'Business' as const,
+                    tags: ['Google']
+                }));
+
+                setServices(prev => {
+                    const ids = new Set(prev.map(s => s.id));
+                    const newOnes = mapped.filter(m => !ids.has(m.id));
+                    return [...prev, ...newOnes];
+                });
+            }
+        } catch (e) {
+            console.error("Search failed:", e);
+        }
+    };
 
     return (
         <AppContext.Provider value={{
             isAuthenticated, user, pets, staticData,
-            appointments, providerAppointments, documents, vaccines, medications, activities, healthStats, reminders, notifications, services, favoriteServiceIds,
+            appointments, providerAppointments, documents, vaccines, medications, medicalVisits, activities, healthStats, reminders, notifications, services, favoriteServiceIds,
             providerProfile, isAdminMode,
             login, register, completeOnboarding, logout,
             addPet, updatePet, deletePet,
             toggleAdminMode, providerLogin, registerAsProvider, updateProviderProfile, updateUser,
             addAppointment, updateAppointment, updateAppointmentStatus, deleteAppointment,
             addDocument, deleteDocument, addVaccine, updateVaccine, addMedication, updateMedication,
-            addActivity, saveHealthRecord, fetchPetAIInsights,
+            addActivity, addMedicalVisit, saveHealthRecord, fetchPetAIInsights,
             addReminder, updateReminder, deleteReminder,
             markNotificationRead, markAllNotificationsRead, toggleServiceFavorite, searchServices
         }}>

@@ -1,15 +1,12 @@
 
-import { useState, useEffect, useContext, createContext } from 'react';
+import { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { getAdminProfile, hasAdminPermission } from '../services/admin';
-import { AdminProfile, AdminRole } from '../types';
+import { AdminRole } from '../types';
 
 interface AdminContextType {
-    adminProfile: AdminProfile | null;
     isAdmin: boolean;
     role: AdminRole | null;
-    loading: boolean;
-    can: (action: string) => boolean; // Helper for permissions
+    can: (action: string) => boolean;
 }
 
 // Simple logic for mapped permissions
@@ -21,40 +18,46 @@ const ROLE_PERMISSIONS: Record<AdminRole, string[]> = {
     'compliance': ['audit.read', 'users.read']
 };
 
-export const useAdminAuth = () => {
+/**
+ * Hook to check if the current user is an admin
+ * Reads from user.roles array (e.g., ['admin', 'pet_owner'])
+ */
+export const useAdminAuth = (): AdminContextType => {
     const { user } = useApp();
-    const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (!user || !user.id) {
-            setAdminProfile(null);
-            setLoading(false);
-            return;
-        }
+    const isAdmin = useMemo(() => {
+        return user?.roles?.includes('admin') || false;
+    }, [user?.roles]);
 
-        const loadProfile = async () => {
-            const profile = await getAdminProfile(user.id);
-            setAdminProfile(profile);
-            setLoading(false);
-        };
+    // Determine admin role level (if admin)
+    // You can extend this to check for specific admin roles like 'super_admin', 'support', etc.
+    const role = useMemo<AdminRole | null>(() => {
+        if (!isAdmin) return null;
 
-        loadProfile();
-    }, [user]);
+        const roles = (user?.roles || []) as string[];
+
+        // Check for specific admin roles in priority order
+        if (roles.includes('super_admin')) return 'super_admin';
+        if (roles.includes('support')) return 'support';
+        if (roles.includes('content')) return 'content';
+        if (roles.includes('finance')) return 'finance';
+        if (roles.includes('compliance')) return 'compliance';
+
+        // Default to super_admin if just 'admin' is present
+        return 'super_admin';
+    }, [isAdmin, user?.roles]);
 
     const can = (action: string): boolean => {
-        if (!adminProfile) return false;
-        if (adminProfile.role === 'super_admin') return true;
+        if (!isAdmin || !role) return false;
+        if (role === 'super_admin') return true;
 
-        const perms = ROLE_PERMISSIONS[adminProfile.role] || [];
+        const perms = ROLE_PERMISSIONS[role] || [];
         return perms.includes(action) || perms.includes('*');
     };
 
     return {
-        adminProfile,
-        isAdmin: !!adminProfile,
-        role: adminProfile?.role || null,
-        loading,
+        isAdmin,
+        role,
         can
     };
 };

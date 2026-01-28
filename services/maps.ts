@@ -7,6 +7,11 @@ let librariesLoaded = false;
 export const loadGoogleMaps = async () => {
     if (librariesLoaded) return;
 
+    if (!API_KEY) {
+        console.warn('Google Maps API key missing');
+        return;
+    }
+
     setOptions({
         key: API_KEY,
         v: "weekly",
@@ -30,6 +35,7 @@ export const geocodeAddress = async (address: string): Promise<{ lat: number, ln
     try {
         await loadGoogleMaps();
         // Access Geocoder from global namespace after loading 'geocoding' lib
+        if (typeof google === 'undefined' || !google.maps) return null;
         const geocoder = new google.maps.Geocoder();
         const response = await geocoder.geocode({ address });
 
@@ -51,6 +57,7 @@ export const geocodeAddress = async (address: string): Promise<{ lat: number, ln
 export const reverseGeocode = async (lat: number, lng: number): Promise<string | null> => {
     try {
         await loadGoogleMaps();
+        if (typeof google === 'undefined' || !google.maps) return null;
         const geocoder = new google.maps.Geocoder();
         const response = await geocoder.geocode({ location: { lat, lng } });
 

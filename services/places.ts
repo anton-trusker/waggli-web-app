@@ -1,4 +1,7 @@
+/// <reference types="google.maps" />
 import { loadGoogleMaps } from './maps';
+
+declare const google: any;
 
 export interface PlaceResult {
     place_id: string;
@@ -25,6 +28,11 @@ export interface PlaceResult {
 export const searchPlaces = async (query: string, type?: string, location?: { lat: number, lng: number }, radius: number = 5000): Promise<PlaceResult[]> => {
     try {
         await loadGoogleMaps();
+
+        if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+            console.warn('Google Maps not available');
+            return [];
+        }
 
         // We need a map div even if hidden to use PlacesService (technically)
         // specific to client-side. Usually we create a dummy div.
@@ -72,6 +80,10 @@ export const searchPlaces = async (query: string, type?: string, location?: { la
 export const getPlaceDetails = async (placeId: string): Promise<PlaceResult | null> => {
     try {
         await loadGoogleMaps();
+        if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+            console.warn('Google Maps not available');
+            return null;
+        }
         const mapDiv = document.createElement('div');
         const map = new google.maps.Map(mapDiv);
         const service = new google.maps.places.PlacesService(map);

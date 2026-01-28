@@ -6,12 +6,12 @@ import { usePlatform } from '../context/PlatformContext';
 import { useLocalization } from '../context/LocalizationContext';
 
 interface HeaderProps {
-    onMenuClick: () => void;
+    onMenuClick?: () => void;
     title?: string;
     subtitle?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ onMenuClick, title, subtitle }) => {
+const Header: React.FC<HeaderProps> = ({ onMenuClick = () => {}, title, subtitle }) => {
     const { user, notifications, markAllNotificationsRead, markNotificationRead, isAdminMode, toggleAdminMode } = useApp();
     const { settings } = usePlatform();
     const { t } = useLocalization();

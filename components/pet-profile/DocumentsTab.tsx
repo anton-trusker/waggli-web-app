@@ -1,13 +1,13 @@
 
 import React, { useState, useRef } from 'react';
-import { Pet, Document } from '../../types';
+import { Pet, PetDocument } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { analyzeDocument } from '../../services/gemini';
 import { uploadFile, deleteFile } from '../../services/storage';
 
 interface DocumentsTabProps {
     pet: Pet;
-    onViewDoc: (doc: Document) => void;
+    onViewDoc: (doc: PetDocument) => void;
 }
 
 const DOC_TYPES = ['All', 'Medical', 'Lab Result', 'Insurance', 'RX', 'Imaging', 'Invoice'];
@@ -37,7 +37,7 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ pet, onViewDoc }) => {
                 const targetId = pet.id || 'temp';
                 const { url, fullPath } = await uploadFile(file, `documents/${targetId}`);
 
-                const newDoc: Document = {
+                const newDoc: PetDocument = {
                     id: Date.now().toString(),
                     petId: pet.id,
                     name: file.name,
@@ -55,7 +55,7 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ pet, onViewDoc }) => {
             } catch (e) {
                 console.error("Upload failed", e);
                 // Fallback for demo if upload fails (e.g. offline)
-                const newDoc: Document = {
+                const newDoc: PetDocument = {
                     id: Date.now().toString(),
                     petId: pet.id,
                     name: file.name,
@@ -93,7 +93,7 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ pet, onViewDoc }) => {
                     storagePath = uploadRes.fullPath;
                 } catch (e) { console.warn("Smart scan upload failed, using local URL"); }
 
-                const newDoc: Document = {
+                const newDoc: PetDocument = {
                     id: Date.now().toString(),
                     petId: pet.id,
                     name: result.title || file.name,
@@ -115,9 +115,9 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ pet, onViewDoc }) => {
         }
     };
 
-    const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+    const [previewDoc, setPreviewDoc] = useState<PetDocument | null>(null);
 
-    const handleDelete = async (doc: Document) => {
+    const handleDelete = async (doc: PetDocument) => {
         if (!confirm(`Delete ${doc.name}?`)) return;
 
         // Optimistic update handled by context, but we should also remove from storage if path exists

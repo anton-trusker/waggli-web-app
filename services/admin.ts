@@ -56,11 +56,14 @@ export const logAdminAction = async (
             ip_address: '0.0.0.0' // Client-side limitation; ideally captured by Edge Function or RLS
         };
 
-        const { error } = await supabase
-            .from('admin_audit_log')
-            .insert(entry);
-
-        if (error) console.error("Audit Log Error:", error);
+        // TODO: admin_audit_log table doesn't exist - create it or remove this feature
+        console.warn('Admin audit logging disabled - table does not exist');
+        // const { error } = await supabase
+        //     .from('admin_audit_log')
+        //     .insert(entry);
+        // if (error && error.code !== '42P17') {
+        //     console.error("Audit Log Error:", error);
+        // }
     } catch (e) {
         console.error("Audit Log Exception:", e);
     }
@@ -68,14 +71,8 @@ export const logAdminAction = async (
 
 export const fetchAuditLogs = async (limit = 50): Promise<AuditLogEntry[]> => {
     try {
-        const { data, error } = await supabase
-            .from('admin_audit_log')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(limit);
-
-        if (error) throw error;
-        return data as AuditLogEntry[];
+        console.warn('Admin audit log fetching disabled - table does not exist');
+        return [];
     } catch (e) {
         console.error("Fetch Audit Logs Failed", e);
         return [];

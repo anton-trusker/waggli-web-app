@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { generateMarketingContent } from '../../services/marketing';
-import { uploadFile } from '../../services/storage';
+import { generateMarketingContent } from '../../../services/marketing';
+import { uploadFile } from '../../../services/storage';
 
 interface ContentEditorProps {
     type: 'banner' | 'email' | 'notification' | 'post' | 'popup';

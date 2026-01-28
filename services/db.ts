@@ -1,5 +1,17 @@
 import { supabase } from "./supabase";
-import { Pet, User, Appointment, StaticData, ServiceProvider, MarketingCampaign, SubscriptionPlan, Insight, PlatformSettings, SupportedLanguage, TranslationItem } from "../types";
+import { MedicalVisit, Pet, User, Appointment, StaticData, ServiceProvider, MarketingCampaign, SubscriptionPlan, Insight, PlatformSettings, SupportedLanguage, TranslationItem, Notification, VaccineRecord, Medication, PetDocument, Reminder, Activity } from "../types";
+import {
+    mapDbPetToAppPet,
+    mapAppPetToDbPet,
+    mapDbVaccineToAppVaccine,
+    mapDbMedicationToAppMedication,
+    mapDbAppointmentToAppAppointment,
+    mapDbUserToAppUser,
+    mapDbReminderToAppReminder,
+    mapAppReminderToDbReminder,
+    mapAppMedicalVisitToDbMedicalVisit
+} from "../utils/mappers";
+
 
 // Fallback Data
 const DEFAULT_STATIC_DATA: StaticData = {
@@ -152,7 +164,7 @@ export const subscribeToPets = (userId: string, callback: (pets: Pet[]) => void)
         .eq('owner_id', userId)
         .then(({ data, error }) => {
             if (!error && data) {
-                callback(data as Pet[]);
+                callback((data || []).map(mapDbPetToAppPet));
             } else {
                 callback([]);
             }
@@ -163,15 +175,16 @@ export const subscribeToPets = (userId: string, callback: (pets: Pet[]) => void)
         .channel(`pets-${userId}`)
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'pets', filter: `owner_id=eq.${userId}` },
-            () => {
+            async () => {
                 // Re-fetch on any change
-                supabase
+                const { data, error } = await supabase
                     .from('pets')
                     .select('*')
-                    .eq('owner_id', userId)
-                    .then(({ data }) => {
-                        if (data) callback(data as Pet[]);
-                    });
+                    .eq('owner_id', userId);
+
+                if (!error && data) {
+                    callback((data || []).map(mapDbPetToAppPet));
+                }
             }
         )
         .subscribe();
@@ -181,30 +194,38 @@ export const subscribeToPets = (userId: string, callback: (pets: Pet[]) => void)
     };
 };
 
-export const addPetToDB = async (pet: Pet) => {
-    const { id, ...petData } = pet;
+export const addPetToDB = async (pet: Pet): Promise<Pet> => {
+    const dbPetData = mapAppPetToDbPet(pet);
+    const { id, ...petData } = dbPetData;
 
     if (id && id.length > 20) {
         // Update existing
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('pets')
-            .upsert({ id, ...petData });
+            .upsert({ id, ...petData })
+            .select()
+            .single();
 
         if (error) throw error;
+        return mapDbPetToAppPet(data);
     } else {
         // Insert new
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('pets')
-            .insert(petData);
+            .insert(petData)
+            .select()
+            .single();
 
         if (error) throw error;
+        return mapDbPetToAppPet(data);
     }
 };
 
 export const updatePetInDB = async (pet: Pet) => {
+    const dbPet = mapAppPetToDbPet(pet);
     const { error } = await supabase
         .from('pets')
-        .update(pet)
+        .update(dbPet)
         .eq('id', pet.id);
 
     if (error) throw error;
@@ -220,7 +241,8 @@ export const subscribeToCollection = <T>(
     tableName: string,
     fieldName: string,
     value: string,
-    callback: (data: T[]) => void
+    callback: (data: T[]) => void,
+    mapper?: (item: any) => T
 ) => {
     // Initial fetch
     supabase
@@ -229,7 +251,8 @@ export const subscribeToCollection = <T>(
         .eq(fieldName, value)
         .then(({ data, error }) => {
             if (!error && data) {
-                callback(data as T[]);
+                const mappedData = mapper ? data.map(mapper) : (data as T[]);
+                callback(mappedData);
             } else {
                 console.error(`Error fetching ${tableName}:`, error);
                 callback([]);
@@ -241,16 +264,17 @@ export const subscribeToCollection = <T>(
         .channel(`${tableName}-${value}`)
         .on('postgres_changes',
             { event: '*', schema: 'public', table: tableName, filter: `${fieldName}=eq.${value}` },
-            (payload) => {
-                // For simplicity, we re-fetch the list on any change. 
-                // Optimization: Handle INSERT/UPDATE/DELETE payload locally.
-                supabase
+            async () => {
+                // Re-fetch on any change
+                const { data, error } = await supabase
                     .from(tableName)
                     .select('*')
-                    .eq(fieldName, value)
-                    .then(({ data }) => {
-                        if (data) callback(data as T[]);
-                    });
+                    .eq(fieldName, value);
+
+                if (!error && data) {
+                    const mappedData = mapper ? data.map(mapper) : (data as T[]);
+                    callback(mappedData);
+                }
             }
         )
         .subscribe();
@@ -260,14 +284,53 @@ export const subscribeToCollection = <T>(
     };
 };
 
+
 // --- APPOINTMENTS ---
 export const addAppointmentDB = async (appt: Appointment) => {
-    const { id, ...data } = appt;
+    const dbAppt = {
+        id: appt.id,
+        pet_id: appt.petId,
+        owner_id: appt.ownerId,
+        provider_id: appt.providerId,
+        title: appt.title,
+        date: appt.date,
+        start_time: appt.startTime || appt.time,
+        end_time: appt.endTime,
+        status: appt.status,
+        location: appt.location,
+        location_name: appt.locationName,
+        address: appt.address,
+        latitude: appt.latitude,
+        longitude: appt.longitude,
+        google_place_id: appt.googlePlaceId,
+        notes: appt.notes,
+        type: appt.type
+    };
+    const { id, ...data } = dbAppt;
     const { error } = await supabase.from('appointments').upsert({ id, ...data });
     if (error) throw error;
 };
 export const updateAppointmentDB = async (appt: Appointment) => {
-    const { error } = await supabase.from('appointments').update(appt).eq('id', appt.id);
+    const dbAppt = {
+        id: appt.id,
+        pet_id: appt.petId,
+        owner_id: appt.ownerId,
+        provider_id: appt.providerId,
+        title: appt.title,
+        date: appt.date,
+        start_time: appt.startTime || appt.time,
+        end_time: appt.endTime,
+        status: appt.status,
+        location: appt.location,
+        location_name: appt.locationName,
+        address: appt.address,
+        latitude: appt.latitude,
+        longitude: appt.longitude,
+        google_place_id: appt.googlePlaceId,
+        notes: appt.notes,
+        type: appt.type
+    };
+    const { error } = await supabase.from('appointments').update(dbAppt).eq('id', appt.id);
     if (error) throw error;
 };
 export const deleteAppointmentDB = async (id: string) => {
@@ -277,48 +340,240 @@ export const deleteAppointmentDB = async (id: string) => {
 
 // --- VACCINES ---
 export const addVaccineDB = async (v: VaccineRecord) => {
-    const { id, ...data } = v;
-    const { error } = await supabase.from('vaccines').upsert({ id, ...data });
+    const dbVax = {
+        id: v.id,
+        pet_id: v.petId,
+        owner_id: (v as any).ownerId,
+        type: v.type,
+        date: v.date,
+        name: v.name,
+        expiry_date: v.expiryDate,
+        next_due_date: v.nextDueDate,
+        manufacturer: v.manufacturer,
+        batch_no: v.batchNo,
+        status: v.status,
+        provider_name: v.providerName,
+        provider_id: v.providerId,
+        provider_address: v.providerAddress,
+        certificate_url: v.certificateUrl,
+        document_id: v.documentId,
+        notes: v.notes
+    };
+    const { id, ...data } = dbVax;
+    const { error } = await supabase.from('pet_vaccines').upsert({ id, ...data });
     if (error) throw error;
 };
 export const updateVaccineDB = async (v: VaccineRecord) => {
-    const { error } = await supabase.from('vaccines').update(v).eq('id', v.id);
+    const dbVax = {
+        id: v.id,
+        pet_id: v.petId,
+        owner_id: (v as any).ownerId,
+        type: v.type,
+        date: v.date,
+        name: v.name,
+        expiry_date: v.expiryDate,
+        next_due_date: v.nextDueDate,
+        manufacturer: v.manufacturer,
+        batch_no: v.batchNo,
+        status: v.status,
+        provider_name: v.providerName,
+        provider_id: v.providerId,
+        provider_address: v.providerAddress,
+        certificate_url: v.certificateUrl,
+        document_id: v.documentId,
+        notes: v.notes
+    };
+    const { error } = await supabase.from('pet_vaccines').update(dbVax).eq('id', v.id);
     if (error) throw error;
 };
 export const deleteVaccineDB = async (id: string) => {
-    const { error } = await supabase.from('vaccines').delete().eq('id', id);
+    const { error } = await supabase.from('pet_vaccines').delete().eq('id', id);
     if (error) throw error;
 };
 
 // --- MEDICATIONS ---
 export const addMedicationDB = async (m: Medication) => {
-    const { id, ...data } = m;
-    const { error } = await supabase.from('medications').upsert({ id, ...data });
+    const dbMed = {
+        id: m.id,
+        pet_id: m.petId,
+        owner_id: (m as any).ownerId,
+        name: m.name,
+        category: m.category,
+        start_date: m.startDate,
+        end_date: m.endDate,
+        refill_date: m.refillDate,
+        frequency: m.frequency,
+        active: m.active,
+        instructions: m.instructions,
+        notes: m.notes,
+        provider_name: m.providerName,
+        provider_id: m.providerId,
+        document_id: m.documentId
+    };
+    const { id, ...data } = dbMed;
+    const { error } = await supabase.from('pet_medications').upsert({ id, ...data });
     if (error) throw error;
 };
 export const updateMedicationDB = async (m: Medication) => {
-    const { error } = await supabase.from('medications').update(m).eq('id', m.id);
+    const dbMed = {
+        id: m.id,
+        pet_id: m.petId,
+        owner_id: (m as any).ownerId,
+        name: m.name,
+        category: m.category,
+        start_date: m.startDate,
+        end_date: m.endDate,
+        refill_date: m.refillDate,
+        frequency: m.frequency,
+        active: m.active,
+        instructions: m.instructions,
+        notes: m.notes,
+        provider_name: m.providerName,
+        provider_id: m.providerId,
+        document_id: m.documentId
+    };
+    const { error } = await supabase.from('pet_medications').update(dbMed).eq('id', m.id);
     if (error) throw error;
 };
 export const deleteMedicationDB = async (id: string) => {
-    const { error } = await supabase.from('medications').delete().eq('id', id);
+    const { error } = await supabase.from('pet_medications').delete().eq('id', id);
     if (error) throw error;
 };
 
 // --- REMINDERS ---
 export const addReminderDB = async (r: Reminder) => {
-    const { id, ...data } = r;
+    const dbRem = mapAppReminderToDbReminder(r);
+    const { id, ...data } = dbRem;
     const { error } = await supabase.from('reminders').upsert({ id, ...data });
     if (error) throw error;
 };
 export const updateReminderDB = async (r: Reminder) => {
-    const { error } = await supabase.from('reminders').update(r).eq('id', r.id);
+    const dbRem = mapAppReminderToDbReminder(r);
+    const { error } = await supabase.from('reminders').update(dbRem).eq('id', r.id);
     if (error) throw error;
 };
+
 export const deleteReminderDB = async (id: string) => {
     const { error } = await supabase.from('reminders').delete().eq('id', id);
     if (error) throw error;
 };
+
+// --- NOTIFICATIONS ---
+export const getNotifications = async (userId: string): Promise<Notification[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('notifications')
+            .select('id, user_id, title, message, created_at, type, read, action_path, priority')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching notifications:', error);
+            return [];
+        }
+
+        // Map database fields to app interface
+        return (data || []).map(n => ({
+            id: n.id,
+            userId: n.user_id,
+            title: n.title,
+            message: n.message || '',
+            time: new Date(n.created_at).toLocaleString(),
+            read: n.read || false,
+            type: n.type || 'info',
+            actionPath: n.action_path,
+            priority: n.priority || 'low'
+        }));
+    } catch (e) {
+        console.error('Failed to fetch notifications:', e);
+        return [];
+    }
+};
+
+export const createNotification = async (notification: Partial<Notification> & { ownerId: string }) => {
+    try {
+        const { data, error } = await supabase
+            .from('notifications')
+            .insert({
+                user_id: notification.ownerId,
+                title: notification.title,
+                message: notification.message,
+                type: notification.type || 'info'
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (e) {
+        console.error('Failed to create notification:', e);
+        throw e;
+    }
+};
+
+export const updateNotification = async (id: string, updates: Partial<Notification>) => {
+    try {
+        const dbUpdates: any = {};
+        if (updates.title !== undefined) dbUpdates.title = updates.title;
+        if (updates.message !== undefined) dbUpdates.message = updates.message;
+        if (updates.read !== undefined) dbUpdates.read = updates.read;
+        if (updates.type !== undefined) dbUpdates.type = updates.type;
+
+        const { error } = await supabase
+            .from('notifications')
+            .update(dbUpdates)
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (e) {
+        console.error('Failed to update notification:', e);
+        throw e;
+    }
+};
+
+export const markNotificationRead = async (id: string) => {
+    try {
+        const { error } = await supabase
+            .from('notifications')
+            .update({ read: true })
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (e) {
+        console.error('Failed to mark notification as read:', e);
+        throw e;
+    }
+};
+
+export const markAllNotificationsRead = async (userId: string) => {
+    try {
+        const { error } = await supabase
+            .from('notifications')
+            .update({ read: true })
+            .eq('user_id', userId)
+            .eq('read', false);
+
+        if (error) throw error;
+    } catch (e) {
+        console.error('Failed to mark all notifications as read:', e);
+        throw e;
+    }
+};
+
+export const deleteNotification = async (id: string) => {
+    try {
+        const { error } = await supabase
+            .from('notifications')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    } catch (e) {
+        console.error('Failed to delete notification:', e);
+        throw e;
+    }
+};
+
 
 // --- ACTIVITIES ---
 export const addActivityDB = async (a: Activity) => {
@@ -328,7 +583,7 @@ export const addActivityDB = async (a: Activity) => {
 };
 
 // --- DOCUMENTS ---
-export const addDocumentDB = async (d: Document) => {
+export const addDocumentDB = async (d: PetDocument) => {
     const { id, ...data } = d;
     const { error } = await supabase.from('documents').upsert({ id, ...data });
     if (error) throw error;
@@ -430,13 +685,15 @@ export const updateProviderVerification = async (providerId: string, status: str
 // --- ADMIN: MARKETING ---
 export const fetchCampaigns = async (): Promise<MarketingCampaign[]> => {
     try {
-        const { data, error } = await supabase
-            .from('marketing_campaigns')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        return data as unknown as MarketingCampaign[];
+        // TODO: marketing_campaigns table doesn't exist
+        console.warn('Marketing campaigns disabled - table does not exist');
+        return [];
+        // const { data, error } = await supabase
+        //     .from('marketing_campaigns')
+        //     .select('*')
+        //     .order('created_at', { ascending: false });
+        // if (error) throw error;
+        // return data as unknown as MarketingCampaign[];
     } catch (e) {
         return [];
     }
@@ -559,12 +816,13 @@ export const getTrends = async () => {
 };
 
 export const saveCampaignDB = async (campaign: Partial<MarketingCampaign>) => {
-    const { id, ...data } = campaign;
-    const { error } = await supabase
-        .from('marketing_campaigns')
-        .upsert({ id, ...data });
-
-    if (error) throw error;
+    // TODO: marketing_campaigns table doesn't exist
+    console.warn('Marketing campaign save disabled - table does not exist');
+    // const { id, ...data } = campaign;
+    // const { error } = await supabase
+    //     .from('marketing_campaigns')
+    //     .upsert({ id, ...data });
+    // if (error) throw error;
 };
 
 // --- ADMIN: SUBSCRIPTIONS ---
@@ -698,13 +956,33 @@ export const upsertGoogleService = async (place: any): Promise<ServiceProvider> 
 };
 
 // --- AI DATA PERSISTENCE ---
-export const saveAIInsightDB = async (petId: string, insight: Insight | any) => {
-    console.warn("saveAIInsightDB not implemented");
+export const saveAIInsightDB = async (petId: string, insight: any, type: string = 'ai_insight') => {
+    const { data: pet } = await supabase.from('pets').select('owner_id').eq('id', petId).single();
+    if (!pet) throw new Error("Pet not found");
+
+    const { error } = await supabase.from('health_records').insert({
+        pet_id: petId,
+        owner_id: pet.owner_id,
+        type: type,
+        title: insight.title || 'AI Health Analysis',
+        description: insight.summary || insight.explanation || '',
+        date_recorded: new Date().toISOString().split('T')[0],
+        metadata: insight
+    });
+
+    if (error) throw error;
 };
 
-export const fetchAIInsightsDB = async (petId: string) => {
-    // Stubbed for Supabase migration
-    return [];
+export const fetchAIInsightsDB = async (petId: string, type: string = 'ai_insight') => {
+    const { data, error } = await supabase
+        .from('health_records')
+        .select('*')
+        .eq('pet_id', petId)
+        .eq('type', type)
+        .order('date_recorded', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
 };
 
 // --- LOCALIZATION  ---
@@ -796,5 +1074,35 @@ export const saveTranslation = async (key: string, translations: Record<string, 
             updated_at: new Date().toISOString()
         }, { onConflict: 'key' });
 
+    if (error) throw error;
+};
+
+export const saveTranslationsBulk = async (items: { key: string, translations: Record<string, string> }[]) => {
+    const { error } = await supabase
+        .from('translations')
+        .upsert(items.map(i => ({
+            key: i.key,
+            translations: i.translations,
+            updated_at: new Date().toISOString()
+        })), { onConflict: 'key' });
+
+    if (error) throw error;
+};
+
+// --- MEDICAL VISITS ---
+export const addMedicalVisitDB = async (visit: MedicalVisit) => {
+    const dbVisit = mapAppMedicalVisitToDbMedicalVisit(visit);
+    const { error } = await supabase.from('medical_visits').insert(dbVisit);
+    if (error) throw error;
+};
+
+export const updateMedicalVisitDB = async (visit: MedicalVisit) => {
+    const dbVisit = mapAppMedicalVisitToDbMedicalVisit(visit);
+    const { error } = await supabase.from('medical_visits').update(dbVisit).eq('id', visit.id);
+    if (error) throw error;
+};
+
+export const deleteMedicalVisitDB = async (id: string) => {
+    const { error } = await supabase.from('medical_visits').delete().eq('id', id);
     if (error) throw error;
 };

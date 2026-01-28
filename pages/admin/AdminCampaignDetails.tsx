@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../../components/Header';
 import { useAdmin } from '../../hooks/useAdmin';
-import { Campaign } from './AdminMarketing';
+import { MarketingCampaign } from '../../types';
 
 const AdminCampaignDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { campaigns } = useAdmin();
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [campaign, setCampaign] = useState<MarketingCampaign | null>(null);
   const [activeTab, setActiveTab] = useState<'Overview' | 'Config'>('Overview');
 
   useEffect(() => {

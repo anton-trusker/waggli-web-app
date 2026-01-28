@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import Header from '../components/Header';
 import { useApp } from '../context/AppContext';
+import { User } from '../types';
 import { useNavigate } from 'react-router-dom';
 import SubscriptionModal from '../components/SubscriptionModal';
 import { uploadBase64 } from '../services/storage';
@@ -70,51 +71,16 @@ const UserProfile: React.FC<UserProfileProps> = ({ onMenuClick }) => {
         }
       }
 
-      // Map App User fields (camelCase) to DB User fields (snake_case)
-      const dbUpdates = {
-        full_name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        country: formData.country,
-        bio: formData.bio,
-        avatar_url: finalImage,
-        birth_date: formData.birthDate || null,  // Send null instead of empty string
-        gender: formData.gender || null,
-        onboarding_completed: true,
-        updated_at: new Date().toISOString()
+
+      // Merged User Object (App Layer)
+      const updatedUser: User = {
+        ...user,
+        ...formData,
+        image: finalImage,
+        birthDate: formData.birthDate || undefined, // undefined sends NULL to DB via mapper if logic handles it, or explicit null logic in mapper
       };
 
-      // Ensure we have an ID
-      if (!user.id) throw new Error("User ID missing");
-
-      // AppContext updateUser now calls updateUserProfileDB(id, updates) correctly
-      // We pass the mapped DB object but cast it to any because the context expects 'User' type usually.
-      // Wait, AppContext updateUser uses updateUserProfileDB(u.id, u). 
-      // If we pass dbUpdates, it lacks 'id'.
-      // And AppContext expects 'id' on the object to pass it to DB function.
-
-      // Let's call updateUser in context with a merged object that has ID.
-      // But 'dbUpdates' has snake_case keys. 'user' has camelCase.
-      // If we pass snake_case to context, context will pass it to DB (good).
-      // But context will also set local state to snake_case (bad).
-
-      // Correct approach:
-      // 1. Call DB update directly here (cleanest) OR
-      // 2. Fix AppContext to handle mapping (best for architecture).
-
-      // Since I already fixed AppContext to take (u.id, u), I will rely on AppContext 
-      // BUT I need to pass an object that has 'id' AND the snake_case fields for DB.
-
-      const mixedUser = {
-        ...user, // keeps 'id' and other props
-        ...formData, // updates camelCase props
-        ...dbUpdates, // adds snake_case props for DB
-        image: finalImage // updates camelCase image
-      };
-
-      await updateUser(mixedUser);
+      await updateUser(updatedUser);
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to update profile", error);

@@ -4,7 +4,7 @@
 -- 1. Notifications Table
 CREATE TABLE IF NOT EXISTS notifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES auth.users NOT NULL,
+  owner_id UUID REFERENCES auth.users NOT NULL,
   title TEXT NOT NULL,
   message TEXT NOT NULL,
   type TEXT CHECK (type IN ('alert', 'reminder', 'info', 'marketing')) DEFAULT 'info',
@@ -17,10 +17,11 @@ CREATE TABLE IF NOT EXISTS notifications (
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
-CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT USING (auth.uid() = owner_id);
 
 DROP POLICY IF EXISTS "Users can update own notifications" ON notifications;
-CREATE POLICY "Users can update own notifications" ON notifications FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own notifications" ON notifications FOR UPDATE USING (auth.uid() = owner_id);
+
 
 -- 2. Reminders Table
 CREATE TABLE IF NOT EXISTS reminders (
@@ -86,22 +87,24 @@ CREATE POLICY "Users manage own appointments" ON appointments FOR ALL USING (aut
 -- 4. User Subscriptions
 CREATE TABLE IF NOT EXISTS user_subscriptions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES auth.users NOT NULL,
+  owner_id UUID REFERENCES auth.users NOT NULL,
   plan_id UUID REFERENCES subscription_plans,
   status TEXT DEFAULT 'trialing',
   current_period_end TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE user_subscriptions ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users;
+ALTER TABLE user_subscriptions ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES auth.users;
 ALTER TABLE user_subscriptions ADD COLUMN IF NOT EXISTS status TEXT;
 
 ALTER TABLE user_subscriptions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users view own subscription" ON user_subscriptions;
-CREATE POLICY "Users view own subscription" ON user_subscriptions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users view own subscription" ON user_subscriptions FOR SELECT USING (auth.uid() = owner_id);
+
 
 -- Indexes (Safe Creation)
-CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_owner_id ON notifications(owner_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_owner_date ON reminders(owner_id, date);
 CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(date);
+

@@ -33,7 +33,7 @@ const StatCard = ({ title, value, subtext, icon, trend, color }: any) => (
 );
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onMenuClick }) => {
-    const { role, adminProfile } = useAdminAuth();
+    const { role } = useAdminAuth();
     const { stats, users, loading } = useAdmin();
     const navigate = useNavigate();
 

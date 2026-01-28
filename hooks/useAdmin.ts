@@ -22,7 +22,14 @@ export const useAdmin = () => {
         totalUsers: 0,
         totalPets: 0,
         totalRevenue: 0,
-        activeSubs: 0
+        activeSubs: 0,
+        avgPetsPerUser: 0,
+        trends: {
+            userGrowth: 0 as number,
+            petGrowth: 0 as number,
+            revenueGrowth: 0 as number,
+            subGrowth: 0 as number
+        }
     });
     const [loading, setLoading] = useState(true);
 
@@ -55,7 +62,13 @@ export const useAdmin = () => {
 
             setStats({
                 ...realStats,
-                trends
+                avgPetsPerUser: Number(realStats.avgPetsPerUser ?? 0),
+                trends: {
+                    userGrowth: Number(trends.userGrowth ?? 0),
+                    petGrowth: Number(trends.petGrowth ?? 0),
+                    revenueGrowth: Number(trends.revenueGrowth ?? 0),
+                    subGrowth: Number(trends.subGrowth ?? 0)
+                }
             });
 
         } catch (error) {

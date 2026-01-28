@@ -19,6 +19,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Onboarding from './pages/Onboarding';
+import PublicPetProfile from './pages/PublicProfile';
 
 // Provider Pages
 import ProviderAuth from './pages/provider/ProviderAuth';
@@ -43,6 +44,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { LocalizationProvider } from './context/LocalizationContext';
 import { PlatformProvider } from './context/PlatformContext';
 import { FeatureFlagProvider } from './context/FeatureFlagContext';
+import { SubscriptionProvider } from './context/SubscriptionContext';
 import { FeatureGate } from './components/FeatureGate';
 import AdminRoutes from './components/AdminRoutes';
 
@@ -96,6 +98,9 @@ const AppRoutes: React.FC = () => {
 
       {/* Onboarding Route (Separate to avoid layout loops) */}
       <Route path="/onboarding" element={<Onboarding />} />
+
+      {/* Public Share Route - Open to all */}
+      <Route path="/share/:shareId" element={<PublicPetProfile />} />
 
       {/* Protected Routes (With Layout) */}
       <Route element={<ProtectedRoutes />}>
@@ -152,47 +157,49 @@ const App: React.FC = () => {
   return (
     <PlatformProvider>
       <LocalizationProvider>
-        <FeatureFlagProvider>
-          <AppProvider>
-            <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AppProvider>
+          <FeatureFlagProvider>
+            <SubscriptionProvider>
+              <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
 
-              <Toaster
-                position="top-center"
-                toastOptions={{
-                  style: {
-                    borderRadius: '12px',
-                    background: '#333',
-                    color: '#fff',
-                  },
-                  success: {
+                <Toaster
+                  position="top-center"
+                  toastOptions={{
                     style: {
-                      background: '#F0FDF4',
-                      color: '#15803D',
-                      border: '1px solid #BBF7D0'
+                      borderRadius: '12px',
+                      background: '#333',
+                      color: '#fff',
                     },
-                    iconTheme: {
-                      primary: '#15803D',
-                      secondary: '#F0FDF4',
+                    success: {
+                      style: {
+                        background: '#F0FDF4',
+                        color: '#15803D',
+                        border: '1px solid #BBF7D0'
+                      },
+                      iconTheme: {
+                        primary: '#15803D',
+                        secondary: '#F0FDF4',
+                      },
                     },
-                  },
-                  error: {
-                    style: {
-                      background: '#FEF2F2',
-                      color: '#B91C1C',
-                      border: '1px solid #FECACA'
+                    error: {
+                      style: {
+                        background: '#FEF2F2',
+                        color: '#B91C1C',
+                        border: '1px solid #FECACA'
+                      },
+                      iconTheme: {
+                        primary: '#B91C1C',
+                        secondary: '#FEF2F2',
+                      },
                     },
-                    iconTheme: {
-                      primary: '#B91C1C',
-                      secondary: '#FEF2F2',
-                    },
-                  },
-                }}
-              />
-              <AppRoutes />
-              <ReminderNotificationSystem />
-            </Router>
-          </AppProvider>
-        </FeatureFlagProvider>
+                  }}
+                />
+                <AppRoutes />
+                <ReminderNotificationSystem />
+              </Router>
+            </SubscriptionProvider>
+          </FeatureFlagProvider>
+        </AppProvider>
       </LocalizationProvider>
     </PlatformProvider>
   );

@@ -2,17 +2,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Pet, VaccineRecord, Medication, Document } from '../types';
+import { Pet, VaccineRecord, Medication, PetDocument } from '../types';
 import { generatePetAvatar } from '../services/gemini';
 import { uploadFile } from '../services/storage';
 import { supabase } from '../services/supabase';
+import { useBreeds } from '../hooks/useBreeds';
+import { useColors } from '../hooks/useColors';
+import { useSpecies } from '../hooks/useSpecies';
+
 
 // --- Constants & Options ---
-const BREEDS_FALLBACK: any = {
-    Dog: ['Golden Retriever', 'Labrador Retriever', 'French Bulldog', 'German Shepherd', 'Poodle', 'Bulldog', 'Beagle', 'Rottweiler', 'Dachshund', 'Corgi', 'Husky', 'Other'],
-    Cat: ['Siamese', 'Persian', 'Maine Coon', 'Ragdoll', 'Bengal', 'Sphynx', 'British Shorthair', 'Abyssinian', 'Scottish Fold', 'Other']
-};
-
 const BLOOD_TYPES: any = {
     Dog: ['DEA 1.1 Negative', 'DEA 1.1 Positive', 'DEA 1.2', 'DEA 3', 'DEA 4', 'DEA 5', 'DEA 7', 'Unknown'],
     Cat: ['Type A', 'Type B', 'Type AB', 'Unknown'],
@@ -72,7 +71,7 @@ interface FormData {
 const AddPet: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
-    const { addPet, updatePet, addVaccine, addMedication, addDocument, pets, staticData } = useApp();
+    const { addPet, updatePet, addVaccine, addMedication, addDocument, pets, staticData, user } = useApp();
     const isEditMode = Boolean(id);
     const petToEdit = isEditMode ? pets.find(p => p.id === id) : null;
 
@@ -83,7 +82,12 @@ const AddPet: React.FC = () => {
     // Pending records to be added after pet creation
     const [newVaccines, setNewVaccines] = useState<Partial<VaccineRecord>[]>([]);
     const [newMeds, setNewMeds] = useState<Partial<Medication>[]>([]);
-    const [newDocs, setNewDocs] = useState<Partial<Document>[]>([]);
+    const [newDocs, setNewDocs] = useState<Partial<PetDocument>[]>([]);
+
+    // Hooks
+    const { species: speciesList, loading: loadingSpecies } = useSpecies();
+    const { colors: colorList, loading: loadingColors } = useColors();
+    // We defer breed loading until we render the field to depend on selected species
 
     // Initialize Data
     const [formData, setFormData] = useState<FormData>(() => {
@@ -165,101 +169,108 @@ const AddPet: React.FC = () => {
     const handleFinish = async () => {
         setIsGenerating(true);
 
-        // 1. Handle Image
-        let finalImage = formData.image;
-        if (!finalImage) {
-            const typeStr = formData.type === 'other' ? formData.customType : formData.type;
-            const desc = `A cute ${formData.color} ${formData.breed} ${typeStr} named ${formData.name}, style 3d render avatar`;
-            try {
-                const aiImage = await generatePetAvatar(desc);
-                if (aiImage) finalImage = aiImage;
-            } catch (e) { console.error("Avatar Gen Error", e); }
-        }
-
-        // 2. Prepare Pet Object
-        const newPetId = isEditMode && petToEdit ? petToEdit.id : Date.now().toString();
-        const typeDisplay = formData.type === 'other' ? (formData.customType || 'Pet') : formData.type.charAt(0).toUpperCase() + formData.type.slice(1);
-
-        const newPet: any = {
-            owner_id: (await supabase.auth.getUser()).data.user?.id,
-            name: formData.name || 'Unnamed Pet',
-            breed: formData.breed || 'Unknown',
-            type: typeDisplay,
-            weight: `${formData.weight} ${formData.weightUnit}`,
-
-            image_url: finalImage || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=300',
-            status: 'Healthy',
-            color: formData.color,
-            gender: formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1),
-            birth_date: formData.birthDate || null,  // Send null instead of empty string
-            microchip_id: formData.microchipId,
-            blood_type: formData.bloodType,
-            neutered: formData.neutered,
-            allergies: formData.allergies,
-            personality: formData.personality,
-            coat_type: formData.coatType,
-            tail_type: formData.tailType,
-            ear_type: formData.earType,
-            eye_color: formData.eyeColor,
-            height: formData.height ? `${formData.height} ${formData.heightUnit}` : null,
-            passport_number: formData.passportNumber,
-            passport_issuer: formData.passportIssuer,
-            passport_date: formData.passportDate,
-            registration_number: formData.registrationNumber,
-            veterinarian: formData.veterinarian,
-            veterinarian_contact: formData.veterinarianContact,
-            distinguishing_marks: formData.distinguishingMarks,
-            breed_notes: formData.notes
-        };
-
-        // 3. Save Pet
-        let savedPetId = isEditMode ? petToEdit?.id : null;
-
-        if (isEditMode && savedPetId) {
-            const { error } = await supabase.from('pets').update(newPet).eq('id', savedPetId);
-            if (error) throw error;
-        } else {
-            const { data, error } = await supabase.from('pets').insert(newPet).select().single();
-            if (error) throw error;
-            savedPetId = data.id;
-        }
-
-        // 4. Save Pending Records (if existing pet, we could do this immediately, but for new pet need ID)
-        // Since addPet/updatePet are generally optimistic or fast, we can add sub-records now.
-        // Note: addPet might be async in context.
-
-        // Save Vaccines
-        if (savedPetId) {
-            for (const v of newVaccines) {
-                if (v.type && v.date) {
-                    addVaccine({ ...v, id: undefined, petId: savedPetId } as unknown as VaccineRecord);
+        try {
+            // 1. Handle Image
+            let finalImage = formData.image;
+            if (!finalImage) {
+                const typeStr = formData.type === 'other' ? formData.customType : formData.type;
+                const desc = `A cute ${formData.color} ${formData.breed} ${typeStr} named ${formData.name}, style 3d render avatar`;
+                try {
+                    const aiImage = await generatePetAvatar(desc);
+                    if (aiImage) finalImage = aiImage;
+                } catch (e) {
+                    console.error("Avatar Gen Error", e);
+                    // Use fallback image if AI generation fails
+                    finalImage = 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=300';
                 }
             }
 
-            // Save Meds
-            for (const m of newMeds) {
-                if (m.name) {
-                    addMedication({ ...m, id: undefined, petId: savedPetId } as unknown as Medication);
+            // 2. Prepare Pet Object with all required fields
+            const typeDisplay = formData.type === 'other' && formData.customType
+                ? formData.customType
+                : formData.type.charAt(0).toUpperCase() + formData.type.slice(1);
+
+            // Determine species_id from type
+            const selectedSpecies = speciesList?.find((s: any) => s.code === formData.type);
+            const speciesId = selectedSpecies?.id;
+
+            const petObj: Partial<Pet> = {
+                name: formData.name || 'Unnamed Pet',
+                breed: formData.breed || 'Unknown',
+                type: typeDisplay,
+                species_id: speciesId, // New Field
+                weight: formData.weight ? `${formData.weight} ${formData.weightUnit}` : 'Unknown',
+                image: finalImage || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=300',
+                status: 'Healthy',
+                color: formData.color || 'Unknown',
+                gender: formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1),
+                birthday: formData.birthDate || undefined,
+                microchipId: formData.microchipId || undefined,
+                bloodType: formData.bloodType || undefined,
+                allergies: formData.allergies || [],
+                personality: formData.personality || [],
+                coatType: formData.coatType || undefined,
+                tailType: formData.tailType || undefined,
+                earType: formData.earType || undefined,
+                eyeColor: formData.eyeColor || undefined,
+                height: formData.height ? `${formData.height} ${formData.heightUnit}` : undefined,
+                passportNumber: formData.passportNumber || undefined,
+                passportIssuer: formData.passportIssuer || undefined,
+                passportDate: formData.passportDate || undefined,
+                registrationNumber: formData.registrationNumber || undefined,
+                veterinarian: formData.veterinarian || undefined,
+                veterinarianContact: formData.veterinarianContact || undefined,
+                distinguishingMarks: formData.distinguishingMarks || undefined,
+                neutered: formData.neutered || false
+            };
+
+            // 3. Save Pet
+            let savedPet: Pet | null = null;
+
+            if (isEditMode && id) {
+                await updatePet({ ...petObj, id } as Pet);
+                savedPet = { ...petObj, id } as Pet;
+            } else {
+                const created = await addPet(petObj as Pet);
+                savedPet = created ?? null;
+            }
+
+            const savedPetId = savedPet?.id;
+
+            // 4. Save Pending Records
+            if (savedPetId) {
+                // Save Vaccines
+                for (const v of newVaccines) {
+                    if (v.type && v.date) {
+                        await addVaccine({ ...v, petId: savedPetId, ownerId: user?.id } as VaccineRecord);
+                    }
+                }
+
+                // Save Meds
+                for (const m of newMeds) {
+                    if (m.name) {
+                        await addMedication({ ...m, petId: savedPetId, ownerId: user?.id } as Medication);
+                    }
+                }
+
+                // Save Documents
+                for (const d of newDocs) {
+                    await addDocument({ ...d, petId: savedPetId } as PetDocument);
                 }
             }
-        }
 
-        // Save Documents
-        // Save Documents (using correctly saved ID)
-        if (savedPetId) {
-            for (const d of newDocs) {
-                if (d.name) {
-                    await addDocument({ ...d, id: undefined, petId: savedPetId } as any);
-                }
-            }
-            // Update context manually or rely on subscription?
-            // Subscription will handle it eventually, but we might want optimistic UI?
-            // For now, rely on subscription in useApp/db.ts
+            // 5. Navigate to pets page on success
+            navigate('/pets');
+        } catch (error) {
+            console.error('Error saving pet:', error);
+            // Show error message to user
+            alert('There was an error saving your pet. Please try again.');
+        } finally {
+            setIsGenerating(false);
         }
-
-        setIsGenerating(false);
-        navigate('/pets');
     };
+
+
 
     const getAgeFromDate = (dateStr: string) => {
         if (!dateStr) return 'Unknown';
@@ -276,18 +287,15 @@ const AddPet: React.FC = () => {
 
     const progressPercentage = (step / totalSteps) * 100;
 
-    // Resolve breeds from staticData or fallback
-    const breedData = staticData?.breeds || BREEDS_FALLBACK;
-
     const props = {
         formData,
         update: updateFormData,
-        breedOptions: breedData,
-        bloodTypeOptions: staticData?.bloodTypes || {},
         newVaccines, setNewVaccines,
         newMeds, setNewMeds,
         newDocs, setNewDocs,
-        petId: isEditMode ? id : 'temp'
+        petId: isEditMode ? id : 'temp',
+        speciesList,
+        colorList
     };
 
     return (
@@ -320,7 +328,7 @@ const AddPet: React.FC = () => {
                         {step === 1 && <StepIdentity {...props} />}
                         {step === 2 && <StepAppearance {...props} />}
                         {step === 3 && <StepHealth {...props} />}
-                        {step === 4 && <StepMedical {...props} />}
+                        {step === 4 && <StepMedical {...props} formData={formData} staticData={staticData} />}
                     </div>
                 </div>
             </div>
@@ -359,33 +367,17 @@ const AddPet: React.FC = () => {
 };
 
 // --- STEP 1: IDENTITY ---
-const StepIdentity = ({ formData, update, breedOptions }: any) => {
-    // Get breeds based on type (Capitalize first letter to match keys like 'Dog', 'Cat')
-    const typeKey = formData.type ? formData.type.charAt(0).toUpperCase() + formData.type.slice(1) : 'Dog';
+const StepIdentity = ({ formData, update, speciesList }: any) => {
+    // Determine species ID from selected type code
+    const selectedSpecies = speciesList?.find((s: any) => s.code === formData.type);
+    const speciesId = selectedSpecies?.id;
 
-    // Dynamic Breed Fetching
-    const [dbBreeds, setDbBreeds] = useState<string[]>([]);
+    // Use Hook for Breeds
+    const { breeds: dbBreeds, loading: loadingBreeds } = useBreeds(speciesId);
 
-    useEffect(() => {
-        const fetchBreeds = async () => {
-            if (formData.type !== 'dog' && formData.type !== 'cat') return;
-            // Map types: dog->Dog, cat->Cat to match DB enum
-            const species = formData.type.charAt(0).toUpperCase() + formData.type.slice(1);
+    const availableBreeds = dbBreeds.map(b => b.name);
 
-            const { data } = await supabase
-                .from('reference_breeds')
-                .select('name')
-                .eq('species', species)
-                .order('name');
 
-            if (data && data.length > 0) {
-                setDbBreeds(data.map(d => d.name));
-            }
-        };
-        fetchBreeds();
-    }, [formData.type]);
-
-    const availableBreeds = dbBreeds.length > 0 ? dbBreeds : (breedOptions[typeKey] || breedOptions['Dog'] || []);
 
     return (
         <div className="space-y-8">
@@ -395,28 +387,24 @@ const StepIdentity = ({ formData, update, breedOptions }: any) => {
             </div>
 
             {/* Pet Type Icons */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                    { id: 'dog', icon: 'pets', label: 'Dog' },
-                    { id: 'cat', icon: 'cruelty_free', label: 'Cat' }, // cruelty_free is cat-like
-                    { id: 'bird', icon: 'flutter_dash', label: 'Bird' },
-                    { id: 'other', icon: 'category', label: 'Other' }
-                ].map(t => (
+            <div className="grid grid-cols-3 gap-4">
+                {speciesList?.slice(0, 3).map((s: any) => (
                     <button
-                        key={t.id}
-                        onClick={() => update('type', t.id)}
-                        className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 group ${formData.type === t.id
+                        key={s.code}
+                        onClick={() => update('type', s.code)}
+                        className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 group ${formData.type === s.code
                             ? 'border-primary bg-primary/5 text-primary shadow-md transform scale-105'
                             : 'border-gray-100 dark:border-gray-800 bg-white dark:bg-surface-dark text-gray-400 hover:border-primary/30 hover:bg-gray-50 dark:hover:bg-gray-800'
                             }`}
                     >
-                        <span className={`material-icons-round text-4xl mb-3 transition-transform group-hover:scale-110 ${formData.type === t.id ? 'text-primary' : 'text-gray-300'}`}>{t.icon}</span>
-                        <span className="font-bold">{t.label}</span>
+                        <span className={`text-4xl mb-3 transition-transform group-hover:scale-110`}>{s.icon_emoji}</span>
+                        <span className="font-bold capitalize">{s.name_key.split('.')[1]}</span>
                     </button>
                 ))}
             </div>
 
-            {formData.type === 'other' && (
+            {/* Custom Type Input if not common */}
+            {!speciesList?.find((s: any) => s.code === formData.type) && (
                 <div className="animate-in fade-in slide-in-from-top-2">
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Specify Type</label>
                     <input
@@ -438,7 +426,7 @@ const StepIdentity = ({ formData, update, breedOptions }: any) => {
                         value={formData.name}
                         onChange={(e) => update('name', e.target.value)}
                         placeholder="e.g. Luna"
-                        className="w-full h-14 px-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-primary font-bold text-lg outline-none shadow-sm placeholder-gray-300"
+                        className="w-full h-14 px-5 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-primary focus:border-primary font-bold text-lg outline-none shadow-sm hover:border-gray-300 transition-colors placeholder-gray-400"
                     />
                 </div>
                 <div>
@@ -448,9 +436,9 @@ const StepIdentity = ({ formData, update, breedOptions }: any) => {
                             <button
                                 key={g}
                                 onClick={() => update('gender', g)}
-                                className={`h-14 rounded-2xl border-2 flex items-center justify-center transition-all ${formData.gender === g
-                                    ? g === 'male' ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/20' : 'border-pink-500 bg-pink-50 text-pink-600 dark:bg-pink-900/20'
-                                    : 'border-gray-100 dark:border-gray-800 bg-white dark:bg-surface-dark text-gray-400 hover:bg-gray-50'
+                                className={`h-14 rounded-2xl border-2 flex items-center justify-center transition-all font-bold text-lg ${formData.gender === g
+                                    ? g === 'male' ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/20 shadow-md' : 'border-pink-500 bg-pink-50 text-pink-600 dark:bg-pink-900/20 shadow-md'
+                                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300'
                                     }`}
                             >
                                 <span className="material-icons-round text-2xl">{g}</span>
@@ -471,7 +459,7 @@ const StepIdentity = ({ formData, update, breedOptions }: any) => {
                             value={formData.breed}
                             onChange={(e) => update('breed', e.target.value)}
                             placeholder="Search breeds..."
-                            className="w-full h-14 px-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-primary font-medium outline-none shadow-sm"
+                            className="w-full h-14 px-5 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-primary focus:border-primary font-medium outline-none shadow-sm hover:border-gray-300 transition-colors"
                         />
                         <datalist id="breedList">
                             {availableBreeds.map((b: string) => <option key={b} value={b} />)}
@@ -482,12 +470,24 @@ const StepIdentity = ({ formData, update, breedOptions }: any) => {
                     </div>
                 </div>
             )}
+            {formData.type === 'other' && (
+                <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Species / Breed</label>
+                    <input
+                        type="text"
+                        value={formData.breed}
+                        onChange={(e) => update('breed', e.target.value)}
+                        placeholder="Enter breed"
+                        className="w-full h-14 px-5 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-primary focus:border-primary font-medium outline-none shadow-sm hover:border-gray-300 transition-colors"
+                    />
+                </div>
+            )}
         </div>
     );
 };
 
 // --- STEP 2: APPEARANCE ---
-const StepAppearance = ({ formData, update }: any) => {
+const StepAppearance = ({ formData, update, colorList }: any) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -532,12 +532,12 @@ const StepAppearance = ({ formData, update }: any) => {
                     <div>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Coat Color</label>
                         <div className="flex flex-wrap gap-3">
-                            {ALERT_COLORS.map(c => (
+                            {colorList?.map((c: any) => (
                                 <button
                                     key={c.name}
                                     onClick={() => update('color', c.name)}
                                     className={`w-10 h-10 rounded-full shadow-sm relative transition-transform hover:scale-110 ${formData.color === c.name ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-gray-900 scale-110' : ''}`}
-                                    style={{ background: c.gradient || c.radial || c.hex, border: c.border ? '1px solid #e5e7eb' : 'none' }}
+                                    style={{ background: c.hex_code || c.name, border: c.hex_code === '#FFFFFF' ? '1px solid #e5e7eb' : 'none' }}
                                     title={c.name}
                                 >
                                     {formData.color === c.name && <span className="material-icons-round text-white text-lg drop-shadow-md">check</span>}
@@ -594,11 +594,29 @@ const StepAppearance = ({ formData, update }: any) => {
 };
 
 // --- STEP 3: HEALTH & BIO ---
-const StepHealth = ({ formData, update, bloodTypeOptions }: any) => {
-    // Dynamic Blood Types based on species
-    // Dynamic Blood Types based on species
+const StepHealth = ({ formData, update }: any) => {
     const typeKey = formData.type ? formData.type.charAt(0).toUpperCase() + formData.type.slice(1) : 'Dog';
-    const availableBloodTypes = bloodTypeOptions[typeKey] || bloodTypeOptions['Other'] || ['Unknown'];
+    const availableBloodTypes = BLOOD_TYPES[typeKey] || BLOOD_TYPES['Other'] || ['Unknown'];
+
+    const formatDisplayDate = (iso: string) => {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return iso;
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    };
+
+    const parseEUDate = (value: string) => {
+        const parts = value.split(/[\/.-]/);
+        if (parts.length === 3) {
+            const [dd, mm, yyyy] = parts;
+            const iso = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+            return iso;
+        }
+        return value;
+    };
 
     const [tagInput, setTagInput] = useState('');
 
@@ -624,13 +642,14 @@ const StepHealth = ({ formData, update, bloodTypeOptions }: any) => {
                 {/* Stats Row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date of Birth</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date of Birth (DD/MM/YYYY)</label>
                         <input
-                            type="date"
-                            max={new Date().toISOString().split('T')[0]}
-                            value={formData.birthDate}
-                            onChange={(e) => update('birthDate', e.target.value)}
-                            className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="dd/mm/yyyy"
+                            value={formatDisplayDate(formData.birthDate)}
+                            onChange={(e) => update('birthDate', parseEUDate(e.target.value))}
+                            className="w-full h-12 px-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark outline-none focus:ring-2 focus:ring-primary focus:border-primary hover:border-gray-300 transition-colors"
                         />
                     </div>
                     <div>
@@ -651,10 +670,10 @@ const StepHealth = ({ formData, update, bloodTypeOptions }: any) => {
                         <select
                             value={formData.bloodType}
                             onChange={(e) => update('bloodType', e.target.value)}
-                            className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary appearance-none"
+                            className="w-full h-12 px-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark outline-none focus:ring-2 focus:ring-primary focus:border-primary appearance-none cursor-pointer hover:border-gray-300 transition-colors"
                         >
-                            <option value="">Unknown</option>
-                            {availableBloodTypes.map((t: string) => <option key={t} value={t}>{t}</option>)}
+                            <option value="">Select blood type</option>
+                            {BLOOD_TYPES[typeKey].map((t: string) => <option key={t} value={t}>{t}</option>)}
                         </select>
                     </div>
                 </div>
@@ -804,14 +823,52 @@ const StepHealth = ({ formData, update, bloodTypeOptions }: any) => {
 };
 
 // --- STEP 4: MEDICAL & DOCS ---
-const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs, setNewDocs, petId }: any) => {
+const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs, setNewDocs, petId, formData, staticData }: any) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [vaxData, setVaxData] = useState({ name: '', date: '' });
     const [isUploading, setIsUploading] = useState(false);
+    const [dbVaccines, setDbVaccines] = useState<any[]>([]);
+
+    // Fetch vaccines from database based on pet type
+    useEffect(() => {
+        const fetchVaccines = async () => {
+            if (!formData.type || formData.type === 'other') {
+                setDbVaccines([]);
+                return;
+            }
+
+            const species = formData.type.charAt(0).toUpperCase() + formData.type.slice(1);
+
+            try {
+                const { data, error } = await supabase
+                    .from('reference_vaccines')
+                    .select('*')
+                    .eq('species', species)
+                    .order('name');
+
+                if (error) {
+                    console.error('Error fetching vaccines:', error);
+                    setDbVaccines([]);
+                } else if (data && data.length > 0) {
+                    setDbVaccines(data);
+                } else {
+                    setDbVaccines([]);
+                }
+            } catch (error) {
+                console.error('Error fetching vaccines:', error);
+                setDbVaccines([]);
+            }
+        };
+
+        fetchVaccines();
+    }, [formData.type]);
+
+    // Use DB vaccines or fallback to static data
+    const vaccineOptions = dbVaccines.length > 0 ? dbVaccines : (staticData?.vaccines?.[formData.type.charAt(0).toUpperCase() + formData.type.slice(1)] || []);
 
     const handleAddVax = () => {
         if (vaxData.name && vaxData.date) {
-            setNewVaccines([...newVaccines, { type: vaxData.name, date: vaxData.date, status: 'Valid' }]);
+            setNewVaccines([...newVaccines, { id: Date.now().toString(), type: vaxData.name, date: vaxData.date, status: 'Valid' }]);
             setVaxData({ name: '', date: '' });
         }
     };
@@ -821,7 +878,7 @@ const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs
         if (!files || files.length === 0) return;
 
         setIsUploading(true);
-        const addedDocs: Partial<Document>[] = [];
+        const addedDocs: Partial<PetDocument>[] = [];
 
         try {
             // Process all files in parallel
@@ -830,9 +887,10 @@ const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs
                 const { url, fullPath } = await uploadFile(file, targetPath);
 
                 addedDocs.push({
+                    id: Date.now().toString() + Math.random().toString(16).slice(2),
                     name: file.name,
                     type: 'Medical',
-                    date: new Date().toLocaleDateString(),
+                    date: new Date().toISOString().split('T')[0],
                     size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
                     url: url,
                     storagePath: fullPath,
@@ -867,16 +925,22 @@ const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs
                     </h3>
                 </div>
                 <div className="flex gap-2 mb-4">
-                    <input
-                        type="text"
-                        placeholder="Vaccine Name (e.g. Rabies)"
-                        value={vaxData.name} onChange={e => setVaxData({ ...vaxData, name: e.target.value })}
-                        className="flex-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl border-none outline-none focus:ring-2 focus:ring-primary text-sm"
-                    />
+                    <select
+                        value={vaxData.name}
+                        onChange={e => setVaxData({ ...vaxData, name: e.target.value })}
+                        className="flex-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-primary text-sm"
+                    >
+                        <option value="">Select vaccine</option>
+                        {vaccineOptions.map((v: any) => (
+                            <option key={v.name || v} value={v.name || v}>
+                                {v.name || v} {v.type ? `(${v.type})` : v.frequency ? `- ${v.frequency}` : ''}
+                            </option>
+                        ))}
+                    </select>
                     <input
                         type="date"
                         value={vaxData.date} onChange={e => setVaxData({ ...vaxData, date: e.target.value })}
-                        className="w-36 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl border-none outline-none focus:ring-2 focus:ring-primary text-sm"
+                        className="w-40 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-primary text-sm"
                     />
                     <button onClick={handleAddVax} className="bg-primary text-white p-2.5 rounded-xl shadow-md hover:bg-primary-hover transition-colors">
                         <span className="material-icons-round">add</span>

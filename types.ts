@@ -7,21 +7,39 @@ export interface PlatformSettings {
   logo_url: string;
   favicon_url: string;
   icon_url: string; // App Icon
-  ai_icon_url?: string; // Custom AI Assistant Icon
+  ai_icon_url?: string;
   primaryColor?: string;
-  modules?: {
-    ai_chat: boolean;
-    ai_features: boolean; // General AI features
-    ai_feed: boolean;
-    ocr: boolean;
-    services_module: boolean;
-    providers_module: boolean;
-    subscription_module: boolean;
-    community_module: boolean;
+  modules?: Record<string, boolean>;
+  contact_info?: {
+    email?: string;
+    phone?: string;
+    address?: string;
+    support_url?: string;
   };
-  features?: Record<string, boolean>; // Generic extensibility
+  social_links?: Array<{ platform: string; url: string; icon: string }>;
+  seo_defaults?: {
+    title_template?: string;
+    default_description?: string;
+    og_image?: string;
+  };
+  features?: Record<string, boolean>;
   updatedAt?: string;
 }
+
+export interface FeatureFlag {
+  module_key: string;
+  module_name: string;
+  description?: string;
+  category?: 'core' | 'premium' | 'experimental' | 'beta';
+  is_enabled: boolean;
+  show_coming_soon: boolean;
+  icon?: string;
+  requires_subscription?: string[];
+  requires_roles?: string[];
+  dependencies?: string[];
+  can_be_disabled?: boolean;
+}
+
 
 export type AdminRole = 'super_admin' | 'support' | 'content' | 'compliance' | 'finance';
 
@@ -67,6 +85,8 @@ export interface User {
   bio: string;
   image: string;
   roles: UserRole[];
+  gender?: string;
+  birthDate?: string;
   providerProfileId?: string;
   onboardingCompleted?: boolean;
   plan?: 'Free' | 'Premium' | 'Family';
@@ -120,6 +140,8 @@ export interface Pet {
   earType?: string;
   neutered?: boolean;
   breedNotes?: string;
+  species_id?: string;
+  computed_health_score?: number;
 }
 
 export interface StaticData {
@@ -144,24 +166,32 @@ export type AppointmentStatus = 'Scheduled' | 'Pending' | 'Confirmed' | 'Cancell
 
 export interface Appointment {
   id: string;
+  title: string;
+  date: string;
   petId?: string;
   ownerId?: string;
-  title: string;
-  subtitle: string;
-  date: string;
-  day: string;
-  month: string;
-  colorClass: string;
-  textClass: string;
-  bgClass: string;
+  providerId?: string;
+  type?: string;
+  startTime?: string;
+  endTime?: string;
+  time?: string;
+  status?: AppointmentStatus;
   location?: string;
+  locationName?: string;
   address?: string;
   latitude?: number;
   longitude?: number;
   googlePlaceId?: string;
   notes?: string;
-  providerId?: string;
-  status?: AppointmentStatus;
+  createdAt?: string;
+  updatedAt?: string;
+  // UI metadata derived from core fields
+  subtitle?: string;
+  day?: string;
+  month?: string;
+  colorClass?: string;
+  textClass?: string;
+  bgClass?: string;
   petName?: string;
   ownerName?: string;
 }
@@ -176,47 +206,68 @@ export interface HealthStat {
   subtext: string;
 }
 
-export interface Document {
+export interface PetDocument {
   id: string;
-  petId?: string;
   ownerId?: string;
+  petId?: string;
   name: string;
   type: string;
-  date: string;
-  size: string;
-  icon: string;
-  iconBg: string;
-  iconColor: string;
+  category?: string;
+  date?: string;
+  size?: string;
+  fileType?: string;
+  icon?: string;
+  iconBg?: string;
+  iconColor?: string;
   url?: string;
+  storagePath?: string;
   notes?: string;
-  storagePath?: string; // Firebase Storage Path
   linkedTo?: string;
+  analyzedByAi?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface VaccineRecord {
   id: string;
   petId?: string;
-  date: string;
+  ownerId?: string;
+  name?: string;
   type: string;
-  manufacturer: string;
-  batchNo: string;
-  expiryDate: string;
-  status: 'Valid' | 'Overdue' | 'Expiring Soon';
+  date: string;
+  expiryDate?: string;
+  nextDueDate?: string;
+  manufacturer?: string;
+  batchNo?: string;
+  status?: 'Valid' | 'Overdue' | 'Expiring Soon';
   providerName?: string;
   providerId?: string;
   providerAddress?: string;
+  notes?: string;
+  certificateUrl?: string;
+  documentId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Medication {
   id: string;
   petId?: string;
+  ownerId?: string;
   name: string;
   category: string;
   startDate: string;
   endDate?: string;
+  refillDate?: string;
   frequency?: string;
+  instructions?: string;
+  notes?: string;
   active: boolean;
   providerName?: string;
+  providerId?: string;
+  documentId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Activity {
@@ -236,34 +287,40 @@ export interface Activity {
 
 export interface ServiceProvider {
   id: string;
-  ownerId?: string;
   name: string;
-  type?: 'Individual' | 'Business';
-  category: 'Vet' | 'Grooming' | 'Store' | 'Training' | 'Boarding' | 'Pet Sitting' | 'Walking' | 'Other';
-  rating: number;
-  reviews: number;
-  distance: string;
+  type: string;
   address: string;
-  image: string;
-  isOpen: boolean;
-  phone: string;
+  phone?: string;
   email?: string;
   website?: string;
-  latitude: number;
-  longitude: number;
-  tags: string[];
-  description?: string;
-  servicesList?: string[];
-  documents?: Document[];
-  sourceUrl?: string;
-  status?: 'Verified' | 'Pending' | 'Rejected';
-  isVerified?: boolean;
+  description: string;
+  image: string;
+  isVerified: boolean;
+  rating: number;
+  reviews: number;
+  services?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    duration: number;
+    price: number;
+  }>;
+  // Optional extended fields used in various views/API responses
+  ownerId?: string;
+  category?: string;
+  distance?: string;
+  latitude?: number;
+  longitude?: number;
+  tags?: string[];
+  isOpen?: boolean;
+  source?: string;
   joinedDate?: string;
-  ownerName?: string;
-  // Google Integration
+  servicesList?: string[];
   googlePlaceId?: string;
-  source?: 'waggli' | 'google';
+  documents?: PetDocument[];
   reviewsList?: { id: string; user: string; date: string; rating: number; text: string; }[];
+  sourceUrl?: string;
+  status?: string;
   owner_name?: string;
   created_at?: string;
 }
@@ -278,6 +335,10 @@ export interface Reminder {
   completed: boolean;
   repeat?: 'Daily' | 'Weekly' | 'Monthly' | 'Never';
   priority?: 'Low' | 'Medium' | 'High';
+  category?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ... types.ts
@@ -300,7 +361,10 @@ export interface Notification {
   message: string;
   time: string;
   read: boolean;
-  type: 'alert' | 'reminder' | 'info';
+  type: 'alert' | 'reminder' | 'info' | 'gap';
+  actionPath?: string;
+  actionLabel?: string;
+  priority?: 'high' | 'medium' | 'low';
 }
 
 export interface MarketingCampaign {
@@ -322,14 +386,47 @@ export interface MarketingCampaign {
   schedule: any;
 }
 
+export interface PlanLimit {
+  feature: string; // e.g., 'ocr', 'ai_chat', 'storage'
+  limit: number;   // -1 for unlimited
+  period: 'daily' | 'monthly' | 'yearly' | 'lifetime';
+}
+
+export interface UserUsage {
+  id: string;
+  userId: string;
+  feature: string;
+  count: number;
+  lastReset: string;
+}
+
 export interface SubscriptionPlan {
   id: string;
   name: string;
   price_monthly: number;
   price_annual: number;
+  price_lifetime?: number; // Added lifetime option
+  currency: string;
   description: string;
   features: string[];
-  limits: any;
+  limits: PlanLimit[]; // Structured limits
+  isActive: boolean;
+  // Legacy fields for backward compatibility
   currency_code?: string;
   ai_features?: any;
+}
+
+export interface MedicalVisit {
+  id: string;
+  petId: string;
+  date: string;
+  clinicName?: string;
+  providerId?: string;
+  reason: string;
+  diagnosis?: string;
+  notes?: string;
+  cost?: number;
+  currency?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

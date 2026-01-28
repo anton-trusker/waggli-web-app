@@ -9,7 +9,7 @@ const cleanJSON = (text: string) => {
     return text.replace(/```json/g, '').replace(/```/g, '').trim();
 };
 
-export const generateHealthCheck = async (pet: any, records: any[], score: number, activities: any[] = []) => {
+export const generateHealthCheck = async (pet: any, records: any[] = [], score: number = 85, activities: any[] = []) => {
     try {
         const prompt = `
       Analyze this pet's health status based on their profile, deterministic wellness score, and records.
@@ -66,23 +66,42 @@ export const generateCareGuide = async (pets: any[], context: any = {}) => {
     }
 };
 
-export const generatePetNews = async () => {
+export const generatePetNews = async (pet?: any) => {
     try {
-        const prompt = `
-      Generate 3 fictitious or general scientific news items about pet health/research.
+        let prompt = `
+      Generate 3 highly relevant scientific or wellness news items for a pet owner.
       Return JSON array with:
       - headline: string
       - snippet: string
       - source: string
+      - url: string (fictitious link for demo, e.g. "https://vet-research.example.com/topic")
     `;
+
+        if (pet) {
+            prompt = `
+        Generate 3 highly relevant scientific or wellness news items for the owner of a ${pet.age} ${pet.breed || 'pet'} named ${pet.name}.
+        Consider these specific details:
+        - Allergies: ${pet.allergies ? pet.allergies.join(', ') : 'None'}
+        - Weight: ${pet.weight || 'Unknown'}
+        - Status: ${pet.status}
+        
+        Focus on research relevant to ${pet.breed} or conditions related to their age/allergies.
+        Return JSON array with:
+        - headline: string
+        - snippet: string containing specific advice for ${pet.name}
+        - source: string
+        - url: string (fictitious link for demo)
+      `;
+        }
 
         const result = await model.generateContent(prompt);
         const text = result.response.text();
         return JSON.parse(cleanJSON(text));
     } catch (error) {
+        console.error("News Generation Error", error);
         return [
-            { headline: "New Study on Dog Cognition", snippet: "Research shows dogs understand more words than previously thought.", source: "Vet Science Daily" },
-            { headline: "Cat Nutrition Breakthrough", snippet: "Optimal protein ratios for senior cats identified.", source: "Pet Health Journal" }
+            { headline: "New Study on Dog Cognition", snippet: "Research shows dogs understand more words than previously thought.", source: "Vet Science Daily", url: "#" },
+            { headline: "Cat Nutrition Breakthrough", snippet: "Optimal protein ratios for senior cats identified.", source: "Pet Health Journal", url: "#" }
         ];
     }
 };
@@ -134,11 +153,10 @@ export const parseNaturalLanguageRecord = async (text: string) => {
     }
 };
 
-export const analyzeSymptoms = async (symptoms: string, petDetails: any) => {
+export const analyzeSymptoms = async (symptoms: string, imageData?: string, imageType?: string) => {
     try {
         const prompt = `
       Analyze these symptoms for a pet:
-      Pet: ${JSON.stringify(petDetails)}
       Symptoms: ${symptoms}
       
       Return JSON:
@@ -147,9 +165,21 @@ export const analyzeSymptoms = async (symptoms: string, petDetails: any) => {
       - recommendation: string
       - disclaimer: "This is AI advice, not a vet diagnosis."
     `;
-        const result = await model.generateContent(prompt);
+
+        const parts: any[] = [prompt];
+        if (imageData && imageType) {
+            parts.push({
+                inlineData: {
+                    data: imageData,
+                    mimeType: imageType
+                }
+            });
+        }
+
+        const result = await model.generateContent(parts);
         return JSON.parse(cleanJSON(result.response.text()));
     } catch (error) {
+        console.error("Symptom analysis error", error);
         return {
             severity: "Unknown",
             recommendation: "Please consult a vet.",

@@ -9,7 +9,7 @@ interface SettingsProps {
 }
 
 const Settings: React.FC<SettingsProps> = ({ onMenuClick }) => {
-  const { language, setLanguage, t } = useLocalization();
+  const { language, setLanguage, t, translateMissingKeys, isTranslating } = useLocalization();
   const { user, updateUser } = useApp(); // Get user and update function
 
   // Initialize state from User Preferences or defaults
@@ -96,19 +96,19 @@ const Settings: React.FC<SettingsProps> = ({ onMenuClick }) => {
 
   return (
     <>
-      <Header onMenuClick={onMenuClick || (() => { })} title={t("Settings")} />
+      <Header onMenuClick={onMenuClick || (() => { })} title={t("Settings") || "Settings"} />
       <div className="p-6 md:p-10 max-w-4xl mx-auto w-full space-y-8">
 
         {/* Appearance Section */}
         <section className="bg-surface-light dark:bg-surface-dark rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 md:p-8">
           <h3 className="text-xl font-bold text-text-main-light dark:text-text-main-dark mb-6 flex items-center gap-2">
-            <span className="material-icons-round text-primary">palette</span> {t("Appearance")}
+            <span className="material-icons-round text-primary">palette</span> {t("Appearance") || "Appearance"}
           </h3>
 
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="font-bold text-text-main-light dark:text-text-main-dark">{t("Dark Mode")}</p>
-              <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{t("Adjust the appearance to reduce eye strain")}</p>
+              <p className="font-bold text-text-main-light dark:text-text-main-dark">{t("Dark Mode") || "Dark Mode"}</p>
+              <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{t("Adjust the appearance to reduce eye strain") || "Adjust the appearance to reduce eye strain"}</p>
             </div>
             <button
               onClick={toggleTheme}
@@ -120,28 +120,39 @@ const Settings: React.FC<SettingsProps> = ({ onMenuClick }) => {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-bold text-text-main-light dark:text-text-main-dark">{t("Language")}</p>
-              <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{t("Select your preferred language")}</p>
+              <p className="font-bold text-text-main-light dark:text-text-main-dark">{t("Language") || "Language"}</p>
+              <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{t("Select your preferred language") || "Select your preferred language"}</p>
             </div>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="bg-gray-100 dark:bg-gray-800 border-none rounded-xl px-4 py-2 font-bold text-sm"
-            >
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="fr">Français</option>
-              <option value="de">Deutsch</option>
-              <option value="zh">中文</option>
-              <option value="ja">日本語</option>
-            </select>
+            <div className="flex items-center gap-2">
+              {language !== 'en' && (
+                <button
+                  onClick={() => translateMissingKeys()}
+                  className="text-xs font-bold text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors"
+                  disabled={false} // Would be nice to track loading state here
+                >
+                  Auto-Translate
+                </button>
+              )}
+              <select
+                value={language}
+                onChange={(e) => handleLanguageChange(e.target.value)}
+                className="bg-gray-100 dark:bg-gray-800 border-none rounded-xl px-4 py-2 font-bold text-sm"
+              >
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
+                <option value="zh">中文</option>
+                <option value="ja">日本語</option>
+              </select>
+            </div>
           </div>
         </section>
 
         {/* Integrations Section */}
         <section className="bg-surface-light dark:bg-surface-dark rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 md:p-8">
           <h3 className="text-xl font-bold text-text-main-light dark:text-text-main-dark mb-6 flex items-center gap-2">
-            <span className="material-icons-round text-primary">sync_alt</span> {t("Integrations")}
+            <span className="material-icons-round text-primary">sync_alt</span> {t("Integrations") || "Integrations"}
           </h3>
 
           <div className="space-y-6">
@@ -151,8 +162,8 @@ const Settings: React.FC<SettingsProps> = ({ onMenuClick }) => {
                   <span className="material-icons-round">calendar_today</span>
                 </div>
                 <div>
-                  <p className="font-bold text-text-main-light dark:text-text-main-dark">{t("Google Calendar")}</p>
-                  <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{t("Sync appointments automatically")}</p>
+                  <p className="font-bold text-text-main-light dark:text-text-main-dark">{t("Google Calendar") || "Google Calendar"}</p>
+                  <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{t("Sync appointments automatically") || "Sync appointments automatically"}</p>
                 </div>
               </div>
               <button
@@ -168,19 +179,19 @@ const Settings: React.FC<SettingsProps> = ({ onMenuClick }) => {
         {/* Notifications Section */}
         <section className="bg-surface-light dark:bg-surface-dark rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 md:p-8">
           <h3 className="text-xl font-bold text-text-main-light dark:text-text-main-dark mb-6 flex items-center gap-2">
-            <span className="material-icons-round text-primary">notifications</span> {t("Notifications")}
+            <span className="material-icons-round text-primary">notifications</span> {t("Notifications") || "Notifications"}
           </h3>
 
           <div className="space-y-6">
             <ToggleItem
-              label={t("Email Notifications")}
-              desc={t("Receive updates about your pet's health records")}
+              label={t("Email Notifications") || "Email Notifications"}
+              desc={t("Receive updates about your pet's health records") || "Receive updates about your pet's health records"}
               checked={notifications.email}
               onChange={() => toggleNotification('email')}
             />
             <ToggleItem
-              label={t("Push Notifications")}
-              desc={t("Get reminders for appointments and meds on your device")}
+              label={t("Push Notifications") || "Push Notifications"}
+              desc={t("Get reminders for appointments and meds on your device") || "Get reminders for appointments and meds on your device"}
               checked={notifications.push}
               onChange={() => toggleNotification('push')}
             />
@@ -190,14 +201,14 @@ const Settings: React.FC<SettingsProps> = ({ onMenuClick }) => {
         {/* Account Actions */}
         <section className="bg-surface-light dark:bg-surface-dark rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 md:p-8">
           <h3 className="text-xl font-bold text-text-main-light dark:text-text-main-dark mb-6 flex items-center gap-2">
-            <span className="material-icons-round text-primary">manage_accounts</span> {t("Account Actions")}
+            <span className="material-icons-round text-primary">manage_accounts</span> {t("Account Actions") || "Account Actions"}
           </h3>
 
           <div className="space-y-4">
             <button className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group text-left">
               <div>
-                <p className="font-bold text-text-main-light dark:text-text-main-dark">{t("Export Data")}</p>
-                <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{t("Download a copy of all your pet's data")}</p>
+                <p className="font-bold text-text-main-light dark:text-text-main-dark">{t("Export Data") || "Export Data"}</p>
+                <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{t("Download a copy of all your pet's data") || "Download a copy of all your pet's data"}</p>
               </div>
               <span className="material-icons-round text-gray-400 group-hover:text-primary">download</span>
             </button>
@@ -206,8 +217,8 @@ const Settings: React.FC<SettingsProps> = ({ onMenuClick }) => {
 
             <button className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors group text-left">
               <div>
-                <p className="font-bold text-red-600 dark:text-red-400">{t("Delete Account")}</p>
-                <p className="text-sm text-red-400/70 dark:text-red-400/60 mt-1">{t("Permanently remove your account and all data")}</p>
+                <p className="font-bold text-red-600 dark:text-red-400">{t("Delete Account") || "Delete Account"}</p>
+                <p className="text-sm text-red-400/70 dark:text-red-400/60 mt-1">{t("Permanently remove your account and all data") || "Permanently remove your account and all data"}</p>
               </div>
               <span className="material-icons-round text-red-300 group-hover:text-red-500">delete_forever</span>
             </button>

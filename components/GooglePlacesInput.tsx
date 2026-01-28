@@ -1,5 +1,8 @@
+/// <reference types="google.maps" />
 import React, { useEffect, useRef, useState } from 'react';
 import { loadGoogleMaps } from '../services/maps';
+
+declare const google: any;
 
 
 interface GooglePlacesInputProps {
@@ -17,65 +20,63 @@ const GooglePlacesInput: React.FC<GooglePlacesInputProps> = ({
   className = "",
   types = ['establishment', 'geocode']
 }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [value, setValue] = useState(defaultValue);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setValue(defaultValue);
-  }, [defaultValue]);
-
-  useEffect(() => {
-    let autocomplete: google.maps.places.Autocomplete;
+    let element: any = null;
 
     const init = async () => {
       try {
         await loadGoogleMaps();
+        // @ts-ignore: PlaceAutocompleteElement might not be in legacy types
+        const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
 
-        if (!inputRef.current) return;
+        if (!containerRef.current) return;
 
-        autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
-          types, // 'establishment' for businesses, 'geocode' for addresses
-          fields: ['place_id', 'geometry', 'name', 'formatted_address', 'address_components', 'types', 'photos', 'rating', 'user_ratings_total']
+        element = new PlaceAutocompleteElement();
+        element.placeholder = placeholder;
+        // Attempt to style: The element is a web component, so standard inputs styles don't apply deep inside.
+        // We set width to 100% to fill the container.
+        element.style.width = '100%';
+        element.style.backgroundColor = 'transparent';
+
+        // Listen for selection
+        element.addEventListener('gmp-places-select', async (e: any) => {
+          const place = e.place;
+          // Fetch details: id, displayName, formattedAddress, location
+          // Note: displayName returns specific object in new API?
+          await place.fetchFields({ fields: ['id', 'displayName', 'formattedAddress', 'location'] });
+
+          onSelect({
+            placeId: place.id,
+            name: place.displayName,
+            address: place.formattedAddress,
+            lat: place.location?.lat(),
+            lng: place.location?.lng(),
+            fullResult: place
+          });
         });
 
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
-          if (place.geometry) {
-            onSelect({
-              placeId: place.place_id,
-              name: place.name,
-              address: place.formatted_address,
-              lat: place.geometry.location?.lat(),
-              lng: place.geometry.location?.lng(),
-              fullResult: place
-            });
-            setValue(place.name || "");
-          }
-        });
+        // Clear and append
+        containerRef.current.innerHTML = '';
+        containerRef.current.appendChild(element);
+
       } catch (error) {
-        console.error("Google Places Autocomplete Error:", error);
+        console.error("Google Places Init Error:", error);
       }
     };
 
     init();
 
-    // Cleanup not strictly necessary for google maps instance but good practice to remove listeners if we could
     return () => {
-      if (autocomplete) {
-        google.maps.event.clearInstanceListeners(autocomplete);
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
       }
     };
-  }, [onSelect, types]);
+  }, [onSelect]);
 
   return (
-    <input
-      ref={inputRef}
-      type="text"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      placeholder={placeholder}
-      className={className || "w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"}
-    />
+    <div ref={containerRef} className={className} style={{ minHeight: '40px' }} />
   );
 };
 

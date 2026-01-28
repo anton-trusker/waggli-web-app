@@ -1,5 +1,11 @@
 
 import { supabase } from "./supabase";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+const genAI = new GoogleGenerativeAI(API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
 
 export interface AudienceSegment {
     id: string;
@@ -41,18 +47,24 @@ export interface MarketingContent {
 // --- CAMPAIGNS ---
 
 export const fetchCampaigns = async () => {
-    const { data, error } = await supabase
-        .from('marketing_campaigns')
-        .select('*')
-        .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data as MarketingCampaign[];
+    // TODO: marketing_campaigns table doesn't exist
+    console.warn('Fetch campaigns disabled - table does not exist');
+    return [];
+    // const { data, error } = await supabase
+    //     .from('marketing_campaigns')
+    //     .select('*')
+    //     .order('created_at', { ascending: false });
+    // if (error) throw error;
+    // return data as MarketingCampaign[];
 };
 
 export const createCampaign = async (campaign: Partial<MarketingCampaign>) => {
-    const { data, error } = await supabase.from('marketing_campaigns').insert(campaign).select().single();
-    if (error) throw error;
-    return data;
+    // TODO: marketing_campaigns table doesn't exist
+    console.warn('Create campaign disabled - table does not exist');
+    return null;
+    // const { data, error } = await supabase.from('marketing_campaigns').insert(campaign).select().single();
+    // if (error) throw error;
+    // return data;
 };
 
 // --- CONTENT ---
@@ -89,10 +101,19 @@ export const createSegment = async (segment: Partial<AudienceSegment>) => {
 // --- AI GENERATION ---
 
 export const generateMarketingContent = async (topic: string, type: string, tone: string) => {
-    // Stub for AI call (Gemini)
-    // In real app, call Edge Function 'generate-copy'
-    return {
-        title: `AI Generated Title for ${topic}`,
-        body: `Here is some compelling ${tone} copy about ${topic}. It works great for a ${type} placement!`
-    };
+    try {
+        const prompt = `Generate a marketing ${type} about "${topic}" with a ${tone} tone for a pet health platform. 
+        Return JSON format: { "title": "...", "body": "..." }`;
+
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(cleanedText);
+    } catch (error) {
+        console.error("Marketing AI Error:", error);
+        return {
+            title: `AI Generated Title for ${topic}`,
+            body: `Here is some compelling ${tone} copy about ${topic}. It works great for a ${type} placement!`
+        };
+    }
 };

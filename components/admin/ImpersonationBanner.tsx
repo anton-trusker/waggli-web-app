@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../../context/AppContext';
 
 export const ImpersonationBanner: React.FC = () => {
     // In a real implementation, we'd detect this via a cookie or local storage flag set during the impersonation flow

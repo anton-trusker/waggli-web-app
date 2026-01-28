@@ -13,8 +13,19 @@ interface OverviewTabProps {
 }
 
 const OverviewTab: React.FC<OverviewTabProps> = ({ pet, onCheckSymptoms, setActiveTab }) => {
-    const { vaccines, medications, appointments } = useApp();
+    const { vaccines, medications, appointments, fetchPetAIInsights, reminders, updateReminder, notifications } = useApp();
     const navigate = useNavigate();
+    const [news, setNews] = React.useState<any[]>([]);
+
+    React.useEffect(() => {
+        const loadNews = async () => {
+            const data = await fetchPetAIInsights(pet.id, 'ai_news');
+            if (data && data.length > 0) {
+                setNews(data[0].metadata.items || []);
+            }
+        };
+        loadNews();
+    }, [pet.id]);
 
     const petVaccines = vaccines.filter(v => v.petId === pet.id);
     const petMedications = medications.filter(m => m.petId === pet.id);
@@ -24,15 +35,27 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ pet, onCheckSymptoms, setActi
     const expiringVaccines = petVaccines.filter(v => v.status === 'Expiring Soon');
     const activeMeds = petMedications.filter(m => m.active);
 
-    // Calculate Wellness Score
-    let wellnessScore = 100;
-    if (pet.status !== 'Healthy') wellnessScore -= 20;
-    wellnessScore -= (overdueVaccines.length * 15);
-    wellnessScore -= (expiringVaccines.length * 5);
-    if (wellnessScore < 0) wellnessScore = 0;
+    // Gap Analysis Alerts (High Priority)
+    const gapAlerts = notifications.filter(n => n.type === 'gap' && n.userId === pet.ownerId); // Assuming notification has pet context or we filter by user for now. 
+    // Types need update to link notification to pet, but for now assuming user context fits single pet or we filter.
+    // Actually notificationGenerator creates for ownerId. If multi-pet, it's global.
+    // For specific pet gaps, the title usually contains pet name. A better way is filtering by actionPath containing pet ID if possible.
+    const petGapAlerts = gapAlerts.filter(n => n.actionPath?.includes(pet.id));
 
-    const ageValue = pet.age.replace(/[^\d.]/g, '');
-    const ageUnit = pet.age.includes('m') ? 'mos' : 'yrs';
+    // Calculate Wellness Score
+    let wellnessScore = pet.computed_health_score ?? 100;
+
+    // Fallback logic if 0 or undefined (optional, or just trust DB)
+    if (wellnessScore === 0 && !pet.computed_health_score) {
+        wellnessScore = 100;
+        if (pet.status !== 'Healthy') wellnessScore -= 20;
+        wellnessScore -= (overdueVaccines.length * 15);
+        wellnessScore -= (expiringVaccines.length * 5);
+        if (wellnessScore < 0) wellnessScore = 0;
+    }
+
+    const ageValue = (pet.age || '').replace(/[^\d.]/g, '') || '0';
+    const ageUnit = (pet.age || '').includes('m') ? 'mos' : 'yrs';
 
     // Simple events for recent history
     const recentEvents = [
@@ -92,6 +115,22 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ pet, onCheckSymptoms, setActi
                     </div>
 
                     <div className="space-y-3 flex-1 overflow-y-auto pr-2">
+                        {/* 1. Gap Alerts (Highest Priority) */}
+                        {petGapAlerts.map(alert => (
+                            <div key={alert.id} className="flex items-center gap-4 p-3 rounded-2xl bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30">
+                                <div className="w-10 h-10 rounded-xl bg-white dark:bg-orange-900/30 flex items-center justify-center text-orange-500 shrink-0 shadow-sm">
+                                    <span className="material-icons-round">priority_high</span>
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-bold text-gray-900 dark:text-white text-sm">{alert.title}</h4>
+                                    <p className="text-xs text-orange-600 dark:text-orange-400">{alert.message}</p>
+                                </div>
+                                <Link to={alert.actionPath || '#'} className="px-3 py-1.5 bg-white dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 text-xs font-bold rounded-lg shadow-sm hover:bg-orange-50 transition-colors">
+                                    {alert.actionLabel || 'Fix'}
+                                </Link>
+                            </div>
+                        ))}
+
                         {overdueVaccines.map(v => (
                             <div key={v.id} className="flex items-center gap-4 p-3 rounded-2xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30">
                                 <div className="w-10 h-10 rounded-xl bg-white dark:bg-red-900/30 flex items-center justify-center text-red-500 shrink-0 shadow-sm">
@@ -146,7 +185,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ pet, onCheckSymptoms, setActi
                         <span className="material-icons-round text-2xl">no_food</span>
                     </div>
                     <div>
-                        <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1">Known Allergies</h3>
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1">Conditions & Allergies</h3>
                         <div className="flex flex-wrap gap-2">
                             {pet.allergies.map((allergy, idx) => (
                                 <span key={idx} className="px-3 py-1 bg-white dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded-lg text-xs font-bold border border-red-100 dark:border-transparent shadow-sm">
@@ -154,6 +193,27 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ pet, onCheckSymptoms, setActi
                                 </span>
                             ))}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Research & News Section (Added) */}
+            {news.length > 0 && (
+                <div className="bg-surface-light dark:bg-surface-dark rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span className="material-icons-round text-blue-500">science</span> Personalized Research & News
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {news.map((item, i) => (
+                            <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className="block border border-gray-100 dark:border-gray-800 p-4 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                                <p className="text-xs text-blue-500 font-bold uppercase tracking-wide mb-2 flex items-center gap-1">
+                                    <span className="material-icons-round text-[10px]">auto_awesome</span>
+                                    {item.source || 'AI Curated'}
+                                </p>
+                                <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary transition-colors">{item.headline}</h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-3">{item.snippet}</p>
+                            </a>
+                        ))}
                     </div>
                 </div>
             )}
@@ -194,14 +254,32 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ pet, onCheckSymptoms, setActi
                         <span className="text-xs font-semibold text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md">Today</span>
                     </div>
                     <div className="space-y-3">
-                        <RoutineItem title="Morning Feed" time="8:00 AM" status="completed" />
-                        <RoutineItem title="Morning Walk" time="8:30 AM" status="completed" />
-                        <RoutineItem title="Medication" time="9:00 AM" status="due" urgent />
-                        <RoutineItem title="Evening Feed" time="6:00 PM" status="upcoming" />
+                        {reminders.filter(r => r.petId === pet.id && (!r.date || r.date === new Date().toISOString().split('T')[0])).length > 0 ? (
+                            reminders
+                                .filter(r => r.petId === pet.id && (!r.date || r.date === new Date().toISOString().split('T')[0]))
+                                .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+                                .map(reminder => (
+                                    <div
+                                        key={reminder.id}
+                                        onClick={() => updateReminder({ ...reminder, completed: !reminder.completed })}
+                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${reminder.completed ? 'bg-gray-50 dark:bg-gray-800/30 border-gray-100 dark:border-gray-800 opacity-70' : 'bg-white dark:bg-surface-dark border-gray-100 dark:border-gray-700'}`}
+                                    >
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${reminder.completed ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 dark:border-gray-600'}`}>
+                                            {reminder.completed && <span className="material-icons-round text-xs">check</span>}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className={`text-sm font-bold ${reminder.completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>{reminder.title}</p>
+                                            <p className="text-xs text-gray-500">{reminder.time || 'All Day'}</p>
+                                        </div>
+                                    </div>
+                                ))
+                        ) : (
+                            <p className="text-gray-400 text-sm text-center py-4 italic">No routine items set for today.</p>
+                        )}
                     </div>
-                    <button className="w-full mt-4 py-2 text-xs font-bold text-gray-500 hover:text-primary border border-dashed border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <Link to="/reminders" className="w-full mt-4 py-2 flex items-center justify-center text-xs font-bold text-gray-500 hover:text-primary border border-dashed border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                         + Add Routine Item
-                    </button>
+                    </Link>
                 </div>
             </div>
         </div>

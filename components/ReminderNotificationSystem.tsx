@@ -8,10 +8,8 @@ const ReminderNotificationSystem: React.FC = () => {
     const [lastChecked, setLastChecked] = useState<number>(Date.now());
 
     useEffect(() => {
-        // Request notification permission on mount
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
-        }
+        // Request notification permission only on user interaction, not on mount
+        // This prevents the "Notification prompting can only be done from a user gesture" error
 
         const checkReminders = () => {
             const now = new Date();
@@ -38,12 +36,17 @@ const ReminderNotificationSystem: React.FC = () => {
                     const pet = pets.find(p => p.id === reminder.petId);
                     const petName = pet ? pet.name : 'General Task';
 
-                    // Browser Notification
-                    if ('Notification' in window && Notification.permission === 'granted') {
-                        new Notification(`Reminder: ${reminder.title}`, {
-                            body: `${petName} - ${reminder.time}`,
-                            icon: '/icons/icon-192x192.png' // Ensure this exists or use logo
-                        });
+                    // Browser Notification - only request permission when actually needed
+                    if ('Notification' in window) {
+                        if (Notification.permission === 'granted') {
+                            new Notification(`Reminder: ${reminder.title}`, {
+                                body: `${petName} - ${reminder.time}`,
+                                icon: '/icons/icon-192x192.png' // Ensure this exists or use logo
+                            });
+                        } else if (Notification.permission === 'default') {
+                            // Don't request permission automatically, let user trigger it
+                            console.log('Notification permission not granted. Enable notifications in browser settings.');
+                        }
                     }
 
                     // In-App Toast
