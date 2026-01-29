@@ -1,4 +1,4 @@
-import { User, Pet, VaccineRecord, Medication, Appointment, Reminder, MedicalVisit } from '../types';
+import { User, Pet, VaccineRecord, Medication, Appointment, Reminder, MedicalVisit, Notification } from '../types';
 
 export const mapDbUserToAppUser = (dbUser: any): User => {
     return {
@@ -137,6 +137,7 @@ export const mapDbVaccineToAppVaccine = (dbVax: any): VaccineRecord => {
         notes: dbVax.notes,
         certificateUrl: dbVax.certificate_url,
         documentId: dbVax.document_id,
+        referenceVaccineId: dbVax.reference_vaccine_id, // Phase 4: Reference Data
         createdAt: dbVax.created_at,
         updatedAt: dbVax.updated_at
     };
@@ -171,9 +172,17 @@ export const mapDbAppointmentToAppAppointment = (dbAppt: any): Appointment => {
         providerId: dbAppt.provider_id,
         title: dbAppt.title,
         date: dbAppt.date,
-        time: dbAppt.time || (dbAppt.start_time ? new Date(dbAppt.start_time).toLocaleTimeString() : ''),
+        time: dbAppt.time || (dbAppt.start_time ? new Date(dbAppt.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''),
+        startTime: dbAppt.start_time,
+        endTime: dbAppt.end_time,
         status: dbAppt.status,
         location: dbAppt.location,
+        locationName: dbAppt.location_name,
+        address: dbAppt.address,
+        latitude: dbAppt.latitude,
+        longitude: dbAppt.longitude,
+        googlePlaceId: dbAppt.google_place_id,
+        type: dbAppt.type,
         notes: dbAppt.notes,
     };
 };
@@ -242,3 +251,18 @@ export const mapAppMedicalVisitToDbMedicalVisit = (visit: MedicalVisit): any => 
     };
 };
 
+
+export const mapDbNotificationToAppNotification = (dbNotif: any): Notification => {
+    return {
+        id: dbNotif.id,
+        userId: dbNotif.user_id,
+        title: dbNotif.title,
+        message: dbNotif.body || dbNotif.data?.message || '',
+        time: dbNotif.created_at || new Date().toISOString(),
+        read: dbNotif.read || false,
+        type: (dbNotif.resource_type as any) || 'info', // Map resource_type to App type
+        actionPath: dbNotif.action_url,
+        actionLabel: dbNotif.action_text,
+        priority: (dbNotif.priority as any) || 'medium'
+    };
+};

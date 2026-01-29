@@ -35,7 +35,9 @@ import {
     mapDbAppointmentToAppAppointment,
     mapDbVaccineToAppVaccine,
     mapDbMedicationToAppMedication,
-    mapDbReminderToAppReminder
+
+    mapDbReminderToAppReminder,
+    mapDbNotificationToAppNotification
 } from '../utils/mappers';
 import { checkVaccineDueNotifications, checkMedicationRefillNotifications, checkAppointmentNotifications, generateAllNotifications } from '../utils/notificationGenerator';
 import type { Session } from '@supabase/supabase-js';
@@ -222,7 +224,7 @@ export const AppProvider = ({ children }: PropsWithChildren<{}>) => {
             // Use user_id as confirmed by DB schema check
             unsubscribe = subscribeToCollection<Notification>('notifications', 'user_id', user.id, (data) => {
                 setNotifications(data);
-            });
+            }, mapDbNotificationToAppNotification);
         }
         return () => {
             if (unsubscribe) unsubscribe();

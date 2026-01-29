@@ -97,6 +97,8 @@ export interface User {
     language: string;
     darkMode: boolean;
     distanceUnit?: 'mi' | 'km';
+    googleCalendarSync?: boolean;
+    appleCalendarSync?: boolean;
   };
   createdAt?: string;
   lastLogin?: string;
@@ -232,6 +234,7 @@ export interface VaccineRecord {
   id: string;
   petId?: string;
   ownerId?: string;
+  referenceVaccineId?: string; // Phase 4: Link to reference
   name?: string;
   type: string;
   date: string;
@@ -297,6 +300,7 @@ export interface ServiceProvider {
   image: string;
   isVerified: boolean;
   rating: number;
+  city?: string;
   reviews: number;
   services?: Array<{
     id: string;

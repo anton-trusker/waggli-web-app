@@ -344,6 +344,7 @@ export const addVaccineDB = async (v: VaccineRecord) => {
         id: v.id,
         pet_id: v.petId,
         owner_id: (v as any).ownerId,
+        reference_vaccine_id: v.referenceVaccineId, // Map to DB
         type: v.type,
         date: v.date,
         name: v.name,
@@ -463,7 +464,7 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
     try {
         const { data, error } = await supabase
             .from('notifications')
-            .select('id, user_id, title, message, created_at, type, read, action_path, priority')
+            .select('id, user_id, title, body, created_at, resource_type, read, action_url, priority')
             .eq('user_id', userId)
             .order('created_at', { ascending: false });
 
@@ -473,16 +474,17 @@ export const getNotifications = async (userId: string): Promise<Notification[]> 
         }
 
         // Map database fields to app interface
+        // We can reuse the mapper if imported or inline map correctly
         return (data || []).map(n => ({
             id: n.id,
             userId: n.user_id,
             title: n.title,
-            message: n.message || '',
+            message: n.body || '', // Map body to message
             time: new Date(n.created_at).toLocaleString(),
             read: n.read || false,
-            type: n.type || 'info',
-            actionPath: n.action_path,
-            priority: n.priority || 'low'
+            type: (n.resource_type as any) || 'info', // resource_type is the new type field
+            actionPath: n.action_url,
+            priority: (n.priority as any) || 'low'
         }));
     } catch (e) {
         console.error('Failed to fetch notifications:', e);
@@ -497,8 +499,9 @@ export const createNotification = async (notification: Partial<Notification> & {
             .insert({
                 user_id: notification.ownerId,
                 title: notification.title,
-                message: notification.message,
-                type: notification.type || 'info'
+                body: notification.message, // Map message to body
+                resource_type: notification.type || 'info', // type -> resource_type
+                // We might want to set template_id if available, or just raw body
             })
             .select()
             .single();

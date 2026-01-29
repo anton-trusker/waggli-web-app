@@ -86,8 +86,8 @@ export interface TreatmentDoseRecord {
 export interface MedicalVisitRecord {
   id: string;
   petId: string;
-  visitType: 'routine_checkup' | 'vaccination' | 'sick_visit' | 'emergency' | 
-            'surgery' | 'specialist' | 'follow_up' | 'dental' | 'lab_work';
+  visitType: 'routine_checkup' | 'vaccination' | 'sick_visit' | 'emergency' |
+  'surgery' | 'specialist' | 'follow_up' | 'dental' | 'lab_work';
   visitDate: string;
   clinicName?: string;
   providerId?: string;
@@ -253,25 +253,4 @@ export interface TreatmentReminder {
 }
 
 // Export all medical record types
-export type {
-  ReferenceVaccine,
-  ReferenceMedication,
-  VaccinationRecord,
-  TreatmentRecord,
-  TreatmentDoseRecord,
-  MedicalVisitRecord,
-  HealthMetricRecord,
-  AllergyRecord,
-  ConditionRecord,
-  VaccinationFormData,
-  TreatmentFormData,
-  MedicalVisitFormData,
-  HealthMetricFormData,
-  VaccinationResponse,
-  TreatmentResponse,
-  MedicalVisitResponse,
-  HealthMetricResponse,
-  PetMedicalSummary,
-  VaccinationReminder,
-  TreatmentReminder
-};
+

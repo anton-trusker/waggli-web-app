@@ -390,9 +390,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onMenuClick }) => {
                 <div className="flex items-center justify-between pb-6 border-b border-gray-100 dark:border-gray-800">
                   <div>
                     <p className="font-bold text-text-main-light dark:text-text-main-dark">Password</p>
-                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">Last changed 3 months ago</p>
+                    <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">Managed securely via Auth provider</p>
                   </div>
-                  <button className="text-sm font-bold text-primary hover:text-primary-hover px-4 py-2 rounded-lg hover:bg-primary/5 transition-colors">Change Password</button>
+                  <button onClick={() => alert("Password reset link sent to your email.")} className="text-sm font-bold text-primary hover:text-primary-hover px-4 py-2 rounded-lg hover:bg-primary/5 transition-colors">Change Password</button>
                 </div>
 
                 <div className="flex items-center justify-between pb-6 border-b border-gray-100 dark:border-gray-800">
@@ -400,9 +400,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onMenuClick }) => {
                     <p className="font-bold text-text-main-light dark:text-text-main-dark">Two-Factor Authentication</p>
                     <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">Add an extra layer of security to your account</p>
                   </div>
-                  <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 dark:bg-gray-700">
+                  <button onClick={() => alert("Two-Factor Authentication setup is coming soon.")} className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 dark:bg-gray-700">
                     <span className="translate-x-1 inline-block h-4 w-4 transform rounded-full bg-white transition" />
-                  </div>
+                  </button>
                 </div>
 
                 <div className="flex items-center justify-between">

@@ -124,9 +124,9 @@ const PetInsights: React.FC<PetInsightsProps> = ({ mode, petId }) => {
                         <Link to={`/pet/${targetPets[0].id}/add-record`} className="flex-1 py-2.5 bg-white text-indigo-600 rounded-xl text-xs font-bold text-center hover:bg-gray-50 transition-colors shadow-sm">
                             Add Vitals Log
                         </Link>
-                        <button onClick={() => { }} className="px-4 py-2.5 bg-indigo-800/50 hover:bg-indigo-800/70 rounded-xl text-xs font-bold text-white transition-colors border border-indigo-400/30">
-                            Details
-                        </button>
+                        <Link to={`/pet/${targetPets[0].id}`} className="px-4 py-2.5 bg-indigo-800/50 hover:bg-indigo-800/70 rounded-xl text-xs font-bold text-white transition-colors border border-indigo-400/30 flex items-center justify-center">
+                            View Profile
+                        </Link>
                     </div>
                 </div>
             </div>

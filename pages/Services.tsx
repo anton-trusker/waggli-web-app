@@ -30,10 +30,26 @@ const Services = ({ defaultCategory = 'All' }: { defaultCategory?: string }) => 
         fetchProviders();
     }, [category]);
 
+    const [locationFilter, setLocationFilter] = useState('');
+
     const handleLocationSelect = (place: any) => {
-        console.log("Location selected:", place);
-        // In a real app we would sort/filter providers by distance to this location
+        if (place && place.formatted_address) {
+            // Extract city or just use the whole address string for simple matching
+            // Ideally we'd use lat/lng, but for this mock provider list we'll use string matching
+            const city = place.address_components?.find((c: any) => c.types.includes('locality'))?.long_name || place.name;
+            setLocationFilter(city || place.formatted_address);
+        }
     };
+
+    const clearLocationResult = () => {
+        setLocationFilter('');
+    };
+
+    const displayedProviders = providers.filter(p => {
+        if (!locationFilter) return true;
+        return p.address.toLowerCase().includes(locationFilter.toLowerCase()) ||
+            p.city?.toLowerCase().includes(locationFilter.toLowerCase());
+    });
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
@@ -62,14 +78,24 @@ const Services = ({ defaultCategory = 'All' }: { defaultCategory?: string }) => 
                             key={cat}
                             onClick={() => setCategory(cat)}
                             className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${category === cat
-                                    ? 'bg-primary text-white shadow-md shadow-primary/30'
-                                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                ? 'bg-primary text-white shadow-md shadow-primary/30'
+                                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
                                 }`}
                         >
                             {t(`service_category_${cat.toLowerCase()}`) || cat}
                         </button>
                     ))}
                 </div>
+
+                {/* Active Filter Indicator */}
+                {locationFilter && (
+                    <div className="flex items-center gap-2 text-sm text-gray-500 bg-white dark:bg-gray-800 w-fit px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700">
+                        <span>Near <b>{locationFilter}</b></span>
+                        <button onClick={clearLocationResult} className="hover:text-red-500">
+                            <span className="material-icons-round text-sm">close</span>
+                        </button>
+                    </div>
+                )}
 
                 {/* List */}
                 {loading ? (
@@ -78,9 +104,9 @@ const Services = ({ defaultCategory = 'All' }: { defaultCategory?: string }) => 
                             <div key={i} className="h-64 bg-white dark:bg-gray-800 rounded-2xl animate-pulse"></div>
                         ))}
                     </div>
-                ) : providers.length > 0 ? (
+                ) : displayedProviders.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {providers.map(provider => (
+                        {displayedProviders.map(provider => (
                             <Link to={`/service/${provider.id}`} key={provider.id} className="group bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all flex flex-col h-full">
                                 <div className="relative h-40 w-full mb-4 overflow-hidden rounded-xl bg-gray-100">
                                     <img src={provider.image} alt={provider.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />

@@ -277,7 +277,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onMenuClick }) => {
             <div className="space-y-3 flex-1">
               {[
                 { icon: 'calendar_month', label: t('action_book_appointment') || 'Book Appointment', to: '/appointments' },
-                { icon: 'note_add', label: t('action_add_record') || 'Add Health Record', to: `/pet/${pets[0]?.id || 'max'}/add-record` },
+                { icon: 'note_add', label: t('action_add_record') || 'Add Health Record', to: pets.length > 0 ? `/pet/${pets[0].id}/add-record` : '/add-pet' },
                 { icon: 'notifications_active', label: t('action_set_reminder') || 'Set Reminder', to: '/reminders' },
                 { icon: 'call', label: t('action_contact_vet') || 'Contact Vet', to: '/find-vet' }
               ].map((action, i) => (

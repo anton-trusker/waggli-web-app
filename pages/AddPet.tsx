@@ -221,6 +221,7 @@ const AddPet: React.FC = () => {
                 veterinarian: formData.veterinarian || undefined,
                 veterinarianContact: formData.veterinarianContact || undefined,
                 distinguishingMarks: formData.distinguishingMarks || undefined,
+                microchipType: formData.microchipType || 'Chip',
                 neutered: formData.neutered || false
             };
 
@@ -868,7 +869,17 @@ const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs
 
     const handleAddVax = () => {
         if (vaxData.name && vaxData.date) {
-            setNewVaccines([...newVaccines, { id: Date.now().toString(), type: vaxData.name, date: vaxData.date, status: 'Valid' }]);
+            // Find reference vaccine details
+            const selectedRef = dbVaccines.find((v: any) => v.name === vaxData.name);
+
+            setNewVaccines([...newVaccines, {
+                id: Date.now().toString(),
+                referenceVaccineId: selectedRef?.id,
+                name: vaxData.name,
+                type: selectedRef?.vaccine_type || 'Core', // Use DB type or default
+                date: vaxData.date,
+                status: 'Valid'
+            }]);
             setVaxData({ name: '', date: '' });
         }
     };
@@ -950,12 +961,29 @@ const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs
                     <div className="space-y-2">
                         {newVaccines.map((v: any, i: number) => (
                             <div key={i} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <span className="font-bold text-sm text-gray-700 dark:text-gray-300">{v.type} <span className="text-gray-400 font-normal text-xs ml-1">on {v.date}</span></span>
+                                <span className="font-bold text-sm text-gray-700 dark:text-gray-300">{v.name} <span className="text-gray-400 font-normal text-xs ml-1">({v.type}) on {v.date}</span></span>
                                 <button onClick={() => setNewVaccines(newVaccines.filter((_: any, idx: number) => idx !== i))} className="text-red-400 hover:text-red-500"><span className="material-icons-round text-sm">close</span></button>
                             </div>
                         ))}
                     </div>
                 ) : <p className="text-xs text-gray-400 italic">No vaccines added yet.</p>}
+            </div>
+
+            {/* Quick Add Medications */}
+            <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="material-icons-round text-purple-500">medication</span> Medications
+                    </h3>
+                </div>
+                {/* Note: In a full implementation, we would toggle an 'Add Medication' form here similar to vaccines, 
+                    but simpler for now just to show the list placeholder or minimal add */}
+                <p className="text-xs text-gray-400 italic mb-2">Medication management is available in the pet profile after creation.</p>
+                {/* 
+                   For now, we will skip the detailed add-medication inputs here to keep the wizard simple 
+                   unless we strictly need it. The user flow often involves adding basics then details later.
+                   But if we want to allow it:
+                */}
             </div>
 
             {/* Document Uploads */}
