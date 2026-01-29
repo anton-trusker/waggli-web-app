@@ -2,6 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .rotate-x-1:hover {
+    transform: rotateX(1deg);
+  }
+
+  .rotate-y-1:hover {
+    transform: rotateY(1deg);
+  }
+
+  @keyframes scan {
+    0% {
+      top: 0;
+    }
+
+    100% {
+      top: 100%;
+    }
+  }
+
+  .animate-scan {
+    animation: scan 2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+}
+
 @layer base {
   body {
     @apply antialiased text-text-main-light bg-background-light dark:text-text-main-dark dark:bg-background-dark;

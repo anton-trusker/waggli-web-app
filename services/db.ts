@@ -580,8 +580,20 @@ export const deleteNotification = async (id: string) => {
 
 // --- ACTIVITIES ---
 export const addActivityDB = async (a: Activity) => {
-    const { id, ...data } = a;
-    const { error } = await supabase.from('activities').upsert({ id, ...data });
+    const { id, colorClass, ownerId, petId, providerId, providerName, providerAddress, ...data } = a as any;
+    const dbPayload = {
+        id,
+        user_id: ownerId,
+        pet_id: petId,
+        provider_id: providerId,
+        provider_name: providerName,
+        provider_address: providerAddress,
+        ...data
+    };
+    // Clean undefined values
+    Object.keys(dbPayload).forEach(key => (dbPayload as any)[key] === undefined && delete (dbPayload as any)[key]);
+
+    const { error } = await supabase.from('activities').upsert(dbPayload);
     if (error) throw error;
 };
 

@@ -129,30 +129,46 @@ const SharingTab: React.FC<SharingTabProps> = ({ pet }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Active Owners */}
-                <div className="bg-white dark:bg-surface-dark rounded-3xl border border-gray-100 dark:border-gray-800 p-6">
-                    <h3 className="font-bold text-gray-900 dark:text-white mb-4">Team Members</h3>
-                    <div className="space-y-4">
-                        {loading ? <p className="text-gray-400 text-sm">Loading...</p> : coOwners.length === 0 ? <p className="text-gray-400 text-sm">No co-owners yet.</p> : coOwners.map(owner => (
-                            <div key={owner.id} className="flex items-center justify-between group">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                                        {owner.profile?.avatar_url ? (
-                                            <img src={owner.profile.avatar_url} alt={owner.profile.full_name} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="flex items-center justify-center h-full text-gray-500 font-bold">
-                                                {owner.profile?.full_name?.[0] || '?'}
-                                            </div>
-                                        )}
+                {/* Active Owners - REDESIGNED */}
+                <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] border border-gray-100 dark:border-gray-800 p-8 shadow-sm">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="font-black text-gray-900 dark:text-white text-lg tracking-tight uppercase">Management Team</h3>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Authorized Access Control</p>
+                        </div>
+                        <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                            <span className="material-icons-round">groups</span>
+                        </div>
+                    </div>
+                    <div className="space-y-6">
+                        {loading ? <div className="flex items-center gap-2 text-gray-400 text-sm animate-pulse"><span className="material-icons-round animate-spin">refresh</span> Loading team...</div> : coOwners.length === 0 ? <p className="text-gray-400 text-sm italic">No co-owners assigned.</p> : coOwners.map(owner => (
+                            <div key={owner.id} className="flex items-center justify-between group p-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl hover:bg-white dark:hover:bg-gray-800 transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-700 shadow-sm hover:shadow-md">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative">
+                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 overflow-hidden border-2 border-white dark:border-gray-800 shadow-sm">
+                                            {owner.profile?.avatar_url ? (
+                                                <img src={owner.profile.avatar_url} alt={owner.profile.full_name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="flex items-center justify-center h-full text-gray-500 font-black text-lg">
+                                                    {owner.profile?.full_name?.[0] || '?'}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full shadow-sm"></div>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-sm text-gray-900 dark:text-white">{owner.profile?.full_name || 'Unknown User'}</p>
-                                        <p className="text-xs text-gray-500">{owner.role} • {owner.profile?.email}</p>
+                                        <p className="font-black text-sm text-gray-900 dark:text-white leading-none mb-1">{owner.profile?.full_name || 'Unknown User'}</p>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${owner.role === 'owner' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                                                {owner.role}
+                                            </span>
+                                            <span className="text-[10px] text-gray-400 font-bold">{owner.profile?.email}</span>
+                                        </div>
                                     </div>
                                 </div>
                                 {owner.role !== 'owner' && (
-                                    <button onClick={() => confirmRemove(owner.id, owner.profile?.full_name || '')} className="text-gray-400 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-all">
-                                        <span className="material-icons-round">delete</span>
+                                    <button onClick={() => confirmRemove(owner.id, owner.profile?.full_name || '')} className="text-gray-300 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl">
+                                        <span className="material-icons-round text-lg">person_remove</span>
                                     </button>
                                 )}
                             </div>
@@ -160,18 +176,31 @@ const SharingTab: React.FC<SharingTabProps> = ({ pet }) => {
                     </div>
                 </div>
 
-                {/* Pending Invites */}
-                <div className="bg-white dark:bg-surface-dark rounded-3xl border border-gray-100 dark:border-gray-800 p-6">
-                    <h3 className="font-bold text-gray-900 dark:text-white mb-4">Pending Invitations</h3>
+                {/* Pending Invites - REDESIGNED */}
+                <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] border border-gray-100 dark:border-gray-800 p-8 shadow-sm">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="font-black text-gray-900 dark:text-white text-lg tracking-tight uppercase">Pending Invites</h3>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Waiting for acceptance</p>
+                        </div>
+                        <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
+                            <span className="material-icons-round">mark_email_read</span>
+                        </div>
+                    </div>
                     <div className="space-y-4">
-                        {loading ? <p className="text-gray-400 text-sm">Loading...</p> : invitations.length === 0 ? <p className="text-gray-400 text-sm">No pending invites.</p> : invitations.map(invite => (
-                            <div key={invite.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+                        {loading ? <div className="text-gray-400 text-sm animate-pulse">Checking invites...</div> : invitations.length === 0 ? (
+                            <div className="text-center py-8 opacity-50">
+                                <span className="material-icons-round text-3xl text-gray-300 mb-2">outgoing_mail</span>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest leading-relaxed">No pending requests<br />out at the moment</p>
+                            </div>
+                        ) : invitations.map(invite => (
+                            <div key={invite.id} className="flex items-center justify-between p-4 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 group hover:border-indigo-200 dark:hover:border-indigo-900/50 transition-all">
                                 <div>
-                                    <p className="font-bold text-sm text-gray-900 dark:text-white">{invite.email}</p>
-                                    <p className="text-xs text-gray-500">Invited as {invite.role}</p>
+                                    <p className="font-black text-sm text-gray-900 dark:text-white mb-1">{invite.email}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Invited as <span className="text-indigo-500">{invite.role}</span></p>
                                 </div>
-                                <button onClick={() => cancelInvitation(invite.id)} className="text-xs font-bold text-red-500 hover:text-red-600 px-3 py-1 bg-red-50 dark:bg-red-900/10 rounded-lg">
-                                    Cancel
+                                <button onClick={() => cancelInvitation(invite.id)} className="px-4 py-2 bg-white dark:bg-gray-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl text-xs font-black shadow-sm transition-all active:scale-95 group-hover:shadow-md">
+                                    Revoke
                                 </button>
                             </div>
                         ))}

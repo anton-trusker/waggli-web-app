@@ -21,55 +21,76 @@ const Dashboard: React.FC<DashboardProps> = ({ onMenuClick }) => {
   const [news, setNews] = useState<any[]>([]);
   const [loadingAI, setLoadingAI] = useState(false);
 
+  // Aggregated Health Data
+  const petHealthData = React.useMemo(() => {
+    return pets.map(pet => {
+      const pVaccines = vaccines.filter(v => v.petId === pet.id);
+      const pMeds = medications.filter(m => m.petId === pet.id);
+      const pActivities = activities.filter(a => a.petId === pet.id);
+
+      const score = calculateHealthScore(pet, pVaccines, pMeds, pActivities);
+      const label = getHealthLabel(score);
+      const suggested = getSuggestedStatus(score, pVaccines);
+      const statusMismatch = pet.status === 'Healthy' && suggested === 'Check-up';
+
+      return { pet, score, label, suggested, statusMismatch };
+    });
+  }, [pets, vaccines, medications, activities]);
+
+  const statusAlerts = petHealthData.filter(d => d.statusMismatch);
+  const showStatusAlert = statusAlerts.length > 0;
+
   const hasHealthRecords = vaccines.length > 0 || medications.length > 0;
 
+  // AI Data Fetching (Aggregated)
   const fetchAIData = async (force = false) => {
     if (pets.length === 0) return;
     setLoadingAI(true);
 
     try {
-      // 1. Check for existing insights if not forcing
-      if (!force) {
-        const existing = await fetchPetAIInsights(pets[0].id, 'ai_insight');
-        if (existing && existing.length > 0) {
-          const latest = existing[0].metadata;
-          const recordDate = new Date(existing[0].date_recorded);
-          const now = new Date();
-          if (now.getTime() - recordDate.getTime() < 24 * 60 * 60 * 1000) {
-            setHealthCheck(latest);
+      // 1. Insights & Health Checks (Loop all pets)
+      const insightsPromises = pets.map(async (pet) => {
+        // Filter records for this pet
+        const pVaccines = vaccines.filter(v => v.petId === pet.id);
+        const pMeds = medications.filter(m => m.petId === pet.id);
+        const pActivities = activities.filter(a => a.petId === pet.id);
+        const pScore = calculateHealthScore(pet, pVaccines, pMeds, pActivities);
+
+        if (!force) {
+          const existing = await fetchPetAIInsights(pet.id, 'ai_insight');
+          if (existing && existing.length > 0) {
+            const latest = existing[0].metadata;
+            if (new Date().getTime() - new Date(existing[0].date_recorded).getTime() < 24 * 60 * 60 * 1000) {
+              return { ...latest, petId: pet.id };
+            }
           }
         }
+        // Generate new if needed
+        const check = await generateHealthCheck(pet, [...pVaccines, ...pMeds], pScore, pActivities);
+        await saveHealthRecord(pet.id, 'medical-note', `AI Health Analysis: ${check.status}`, check);
+        return { ...check, petId: pet.id };
+      });
 
-        // Fetch existing news
-        const existingNews = await fetchPetAIInsights(pets[0].id, 'ai_news');
-        if (existingNews && existingNews.length > 0) {
-          const latestNews = existingNews[0].metadata;
-          const recordDate = new Date(existingNews[0].date_recorded);
-          if (new Date().getTime() - recordDate.getTime() < 24 * 60 * 60 * 1000) {
-            setNews(latestNews.items || []); // Assuming metadata structure { items: [...] }
-          }
-        }
-      }
+      const allInsights = await Promise.all(insightsPromises);
+      // For dashboard summary, we might just pick the one needing most attention or the first
+      // But let's store the first one for the main banner for now, or use a specific aggregate view state?
+      // The current UI expects a single 'healthCheck' object. Let's use the first one or the lowest score one.
+      const criticalInsight = allInsights.sort((a, b) => (a.score || 100) - (b.score || 100))[0];
+      setHealthCheck(criticalInsight);
 
-      // 2. Generate New Insights (if missing)
-      if (!healthCheck) { // Logic simplified: if healthCheck state is null, fetch
-        const check = await generateHealthCheck(pets[0], [...vaccines, ...medications], healthScore, activities || []);
+      // 2. Care Guide (Aggregated Context)
+      if (!careGuide.length || force) {
         const guide = await generateCareGuide(pets, {
-          healthScore,
-          appointments: appointments.slice(0, 3),
-          allergies: pets[0]?.allergies
+          overview: petHealthData.map(d => `${d.pet.name}: Score ${d.score}, Status ${d.pet.status}`),
+          appointments: appointments.slice(0, 3)
         });
-
-        await saveHealthRecord(pets[0].id, 'medical-note', `AI Health Analysis: ${check.status}`, check);
-        setHealthCheck(check);
         setCareGuide(guide);
       }
 
-      // 3. Generate News (if missing)
-      if (news.length === 0) {
-        const petNews = await generatePetNews(pets[0]);
+      // 3. News (Aggregated topics for all pets)
+      if (news.length === 0 || force) {
+        const petNews = await generatePetNews(pets);
         setNews(petNews);
-        await saveHealthRecord(pets[0].id, 'other', 'Daily Curated News', { items: petNews });
       }
 
     } catch (e) {
@@ -79,23 +100,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onMenuClick }) => {
     }
   };
 
-  // Deterministic Score Calculation
-  const healthScore = pets.length > 0 ? calculateHealthScore(pets[0], vaccines, medications, activities || []) : 0;
-  const healthLabel = getHealthLabel(healthScore);
-  const suggestedStatus = pets.length > 0 ? getSuggestedStatus(healthScore, vaccines) : 'Healthy';
-  const showStatusAlert = pets.length > 0 && pets[0].status === 'Healthy' && suggestedStatus === 'Check-up';
-
   useEffect(() => {
     fetchAIData();
-  }, [pets.length]); // Dependency on pets.length keeps re-triggering logic correctly
+  }, [pets.length, vaccines.length, medications.length, activities.length]); // Added more dependencies for comprehensive re-triggering
 
   return (
     <>
       <Header onMenuClick={onMenuClick || (() => { })} />
       <div className="p-6 md:p-8 space-y-8">
-
-        {/* ... (Pets Section & Banner Unchanged) ... */}
-        {/* ... Copied logic around lines 86-180 preserved effectively by not touching it ... */}
 
         {/* Pets Section */}
         <div>
@@ -111,7 +123,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onMenuClick }) => {
 
           {pets.length > 0 ? (
             <div className="flex overflow-x-auto pb-4 gap-3 md:gap-4 snap-x no-scrollbar">
-              {pets.map((pet) => (
+              {petHealthData.map(({ pet, score }) => (
                 <Link
                   key={pet.id}
                   to={`/pet/${pet.id}`}
@@ -128,7 +140,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onMenuClick }) => {
                         {pet.status}
                       </span>
                     </div>
-                    <p className="text-[10px] md:text-sm text-text-muted-light dark:text-text-muted-dark truncate w-full mb-0 md:mb-2">{pet.breed}</p>
+                    <div className="flex items-center justify-center md:justify-start gap-2 text-[10px] md:text-sm text-text-muted-light dark:text-text-muted-dark">
+                      <span className="truncate">{pet.breed}</span>
+                      <span className="hidden md:inline">•</span>
+                      <span className={`font-bold ${score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>Score: {score}</span>
+                    </div>
                   </div>
                 </Link>
               ))}
@@ -138,31 +154,32 @@ const Dashboard: React.FC<DashboardProps> = ({ onMenuClick }) => {
               <p className="text-gray-500 mb-4">{t('no_pets_message') || 'No pets added yet.'}</p>
               <Link to="/add-pet" className="text-primary font-bold hover:underline">{t('add_first_pet_link') || 'Add your first pet'}</Link>
             </div>
-
           )}
 
-          {/* Status Mismatch Alert */}
-          {showStatusAlert && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2 mt-4">
-              <div className="flex items-center gap-3">
-                <span className="material-icons-round text-yellow-600 dark:text-yellow-400">health_and_safety</span>
-                <div>
-                  <h4 className="font-bold text-yellow-800 dark:text-yellow-200 text-sm">Health Status Update Recommended</h4>
-                  <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                    Based on recent records (Score: {healthScore}), we recommend updating status to <strong>Check-up</strong>.
-                  </p>
+          {/* Status Mismatch Alerts (Aggregated) */}
+          <div className="space-y-2 mt-4">
+            {statusAlerts.map(({ pet, score }) => (
+              <div key={pet.id} className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-3">
+                  <span className="material-icons-round text-yellow-600 dark:text-yellow-400">health_and_safety</span>
+                  <div>
+                    <h4 className="font-bold text-yellow-800 dark:text-yellow-200 text-sm">Update for {pet.name}</h4>
+                    <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                      Score dropped to {score}. Consider updating status to <strong>Check-up</strong>.
+                    </p>
+                  </div>
                 </div>
+                <Link to={`/pet/${pet.id}`} className="px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-800 dark:hover:bg-yellow-700 text-yellow-900 dark:text-white text-xs font-bold rounded-lg transition-colors">
+                  Review
+                </Link>
               </div>
-              <Link to={`/pet/${pets[0].id}`} className="px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-800 dark:hover:bg-yellow-700 text-yellow-900 dark:text-white text-xs font-bold rounded-lg transition-colors">
-                Review
-              </Link>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
 
         {/* AI Health Check Banner */}
         <FeatureGate feature="ai_features">
-          {pets.length > 0 && (
+          {pets.length > 0 && healthCheck && (
             <div className={`rounded-3xl p-6 relative overflow-hidden transition-all ${!hasHealthRecords
               ? 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50'
               : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
@@ -177,7 +194,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onMenuClick }) => {
                     <p className="text-sm text-red-600 dark:text-red-400 mt-1 mb-3">
                       {t('health_records_missing_text') || "To get AI insights and health tracking, please add your pet's vaccination and medical history."}
                     </p>
-                    <Link to={`/pet/${pets[0].id}/add-record`} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-red-700 transition-colors">
+                    <Link to={`/pet/${healthCheck.petId || pets[0].id}/add-record`} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-red-700 transition-colors">
                       {t('add_records_button') || 'Add Records Now'}
                     </Link>
                   </div>
@@ -201,9 +218,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onMenuClick }) => {
                       {loadingAI ? 'Analyzing records...' : (healthCheck?.summary || 'Your pets seem healthy based on current records.')}
                     </p>
                   </div>
-                  {healthScore > 0 && (
-                    <div className={`flex items-center gap-3 ${healthLabel.bg} ${healthLabel.color} px-4 py-2 rounded-2xl`}>
-                      <span className="text-3xl font-bold">{healthScore}</span>
+                  {(healthCheck?.score || 0) > 0 && (
+                    <div className={`flex items-center gap-3 ${getHealthLabel(healthCheck.score).bg} ${getHealthLabel(healthCheck.score).color} px-4 py-2 rounded-2xl`}>
+                      <span className="text-3xl font-bold">{healthCheck.score}</span>
                       <div className="text-[10px] uppercase font-bold leading-tight line-clamp-2">Health<br />Score</div>
                     </div>
                   )}
@@ -277,7 +294,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onMenuClick }) => {
             <div className="space-y-3 flex-1">
               {[
                 { icon: 'calendar_month', label: t('action_book_appointment') || 'Book Appointment', to: '/appointments' },
-                { icon: 'note_add', label: t('action_add_record') || 'Add Health Record', to: pets.length > 0 ? `/pet/${pets[0].id}/add-record` : '/add-pet' },
+                { icon: 'note_add', label: t('action_add_record') || 'Add Health Record', to: pets.length > 0 ? `/pet/${healthCheck?.petId || pets[0].id}/add-record` : '/add-pet' },
                 { icon: 'notifications_active', label: t('action_set_reminder') || 'Set Reminder', to: '/reminders' },
                 { icon: 'call', label: t('action_contact_vet') || 'Contact Vet', to: '/find-vet' }
               ].map((action, i) => (

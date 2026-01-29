@@ -485,7 +485,9 @@ export const AppProvider = ({ children }: PropsWithChildren<{}>) => {
     };
 
     const addActivity = async (a: Activity) => {
-        await addActivityDB({ ...a, ownerId: user.id } as any);
+        // payload sanitization: remove colorClass if present as it is UI-only
+        const { colorClass, ...dbActivity } = a as any;
+        await addActivityDB({ ...dbActivity, ownerId: user.id });
     };
 
     const addMedicalVisit = async (visit: MedicalVisit) => {

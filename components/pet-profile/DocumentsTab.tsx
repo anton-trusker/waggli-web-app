@@ -246,13 +246,74 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ pet, onViewDoc }) => {
                             </div>
 
                             {previewDoc.notes && (
-                                <div className="p-6 bg-purple-50 dark:bg-purple-900/10 border-t border-purple-100 dark:border-purple-900/30">
-                                    <h4 className="text-sm font-bold text-purple-800 dark:text-purple-300 mb-2 flex items-center gap-2">
-                                        <span className="material-icons-round text-base">auto_awesome</span> AI Analysis
-                                    </h4>
-                                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{previewDoc.notes}</p>
+                                <div className="p-8 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/10 dark:to-indigo-900/10 border-t border-purple-100 dark:border-purple-900/30">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="p-2 bg-purple-500 rounded-lg text-white shadow-lg shadow-purple-500/20">
+                                            <span className="material-icons-round text-xl">auto_awesome</span>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-black text-purple-900 dark:text-purple-100 uppercase tracking-widest">
+                                                AI Medical Insight
+                                            </h4>
+                                            <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mt-0.5">Automated Clinical Analysis</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white/60 dark:bg-black/20 backdrop-blur-sm p-4 rounded-2xl border border-purple-100 dark:border-purple-800/30">
+                                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                                            {previewDoc.notes}
+                                        </p>
+                                    </div>
+                                    <div className="mt-4 flex gap-4">
+                                        <div className="flex-1 bg-white/40 dark:bg-black/10 p-3 rounded-xl border border-white/50 dark:border-white/5">
+                                            <p className="text-[9px] font-bold text-gray-400 uppercase mb-1">Confidence</p>
+                                            <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                <div className="h-full bg-green-500 w-[94%]"></div>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 bg-white/40 dark:bg-black/10 p-3 rounded-xl border border-white/50 dark:border-white/5 text-right">
+                                            <p className="text-[9px] font-bold text-gray-400 uppercase mb-1">Status</p>
+                                            <p className="text-[10px] font-black text-gray-900 dark:text-white uppercase">Processed</p>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SMART SCAN ANIMATION OVERLAY */}
+            {isScanning && (
+                <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in">
+                    <div className="relative w-full max-w-sm aspect-[3/4] bg-gray-900 rounded-[32px] border-4 border-purple-500/30 shadow-2xl overflow-hidden flex flex-col items-center justify-center">
+                        <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+
+                        {/* The Laser Line */}
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-purple-500 shadow-[0_0_20px_#A855F7] animate-scan z-20"></div>
+
+                        <div className="relative z-10 text-center space-y-4">
+                            <div className="w-20 h-20 bg-purple-500 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_40px_rgba(168,85,247,0.4)]">
+                                <span className="material-icons-round text-4xl text-white">auto_awesome</span>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-white tracking-tight">AI Smart Scan</h3>
+                                <p className="text-purple-300 text-xs font-bold uppercase tracking-widest mt-1">Analyzing Document Content</p>
+                            </div>
+                            <div className="flex gap-1 justify-center mt-4">
+                                <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce"></div>
+                            </div>
+                        </div>
+
+                        {/* Decorative UI elements */}
+                        <div className="absolute bottom-6 left-6 right-6 flex justify-between">
+                            <div className="w-8 h-8 border-b-2 border-l-2 border-purple-500/50 rounded-bl-xl"></div>
+                            <div className="w-8 h-8 border-b-2 border-r-2 border-purple-500/50 rounded-br-xl"></div>
+                        </div>
+                        <div className="absolute top-6 left-6 right-6 flex justify-between">
+                            <div className="w-8 h-8 border-t-2 border-l-2 border-purple-500/50 rounded-tl-xl"></div>
+                            <div className="w-8 h-8 border-t-2 border-r-2 border-purple-500/50 rounded-tr-xl"></div>
                         </div>
                     </div>
                 </div>

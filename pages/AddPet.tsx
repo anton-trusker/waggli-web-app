@@ -9,6 +9,7 @@ import { supabase } from '../services/supabase';
 import { useBreeds } from '../hooks/useBreeds';
 import { useColors } from '../hooks/useColors';
 import { useSpecies } from '../hooks/useSpecies';
+import { COUNTRIES } from '../utils/countries';
 
 
 // --- Constants & Options ---
@@ -59,7 +60,7 @@ interface FormData {
     earType: string;
     eyeColor: string;
     passportNumber: string;
-    passportIssuer: string;
+    passportCountry: string;
     registrationNumber: string;
     veterinarian: string;
     veterinarianContact: string;
@@ -80,8 +81,8 @@ const AddPet: React.FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
 
     // Pending records to be added after pet creation
+    // Pending records to be added after pet creation
     const [newVaccines, setNewVaccines] = useState<Partial<VaccineRecord>[]>([]);
-    const [newMeds, setNewMeds] = useState<Partial<Medication>[]>([]);
     const [newDocs, setNewDocs] = useState<Partial<PetDocument>[]>([]);
 
     // Hooks
@@ -116,7 +117,7 @@ const AddPet: React.FC = () => {
                 earType: petToEdit.earType || '',
                 eyeColor: petToEdit.eyeColor || '',
                 passportNumber: petToEdit.passportNumber || '',
-                passportIssuer: petToEdit.passportIssuer || '',
+                passportCountry: petToEdit.passportIssuer || '', // Mapping issuer to country for now if reused
                 registrationNumber: petToEdit.registrationNumber || '',
                 veterinarian: petToEdit.veterinarian || '',
                 veterinarianContact: petToEdit.veterinarianContact || '',
@@ -149,7 +150,7 @@ const AddPet: React.FC = () => {
             earType: '',
             eyeColor: '',
             passportNumber: '',
-            passportIssuer: '',
+            passportCountry: '',
             registrationNumber: '',
             veterinarian: '',
             veterinarianContact: '',
@@ -207,7 +208,6 @@ const AddPet: React.FC = () => {
                 birthday: formData.birthDate || undefined,
                 microchipId: formData.microchipId || undefined,
                 bloodType: formData.bloodType || undefined,
-                allergies: formData.allergies || [],
                 personality: formData.personality || [],
                 coatType: formData.coatType || undefined,
                 tailType: formData.tailType || undefined,
@@ -215,7 +215,7 @@ const AddPet: React.FC = () => {
                 eyeColor: formData.eyeColor || undefined,
                 height: formData.height ? `${formData.height} ${formData.heightUnit}` : undefined,
                 passportNumber: formData.passportNumber || undefined,
-                passportIssuer: formData.passportIssuer || undefined,
+                passportIssuer: formData.passportCountry || undefined, // Storing Country in Issuer field for API compat
                 passportDate: formData.passportDate || undefined,
                 registrationNumber: formData.registrationNumber || undefined,
                 veterinarian: formData.veterinarian || undefined,
@@ -247,12 +247,7 @@ const AddPet: React.FC = () => {
                     }
                 }
 
-                // Save Meds
-                for (const m of newMeds) {
-                    if (m.name) {
-                        await addMedication({ ...m, petId: savedPetId, ownerId: user?.id } as Medication);
-                    }
-                }
+                // Medications removed from wizard flow
 
                 // Save Documents
                 for (const d of newDocs) {
@@ -292,7 +287,6 @@ const AddPet: React.FC = () => {
         formData,
         update: updateFormData,
         newVaccines, setNewVaccines,
-        newMeds, setNewMeds,
         newDocs, setNewDocs,
         petId: isEditMode ? id : 'temp',
         speciesList,
@@ -350,7 +344,7 @@ const AddPet: React.FC = () => {
                         disabled={!formData.name || !formData.breed}
                         className="flex items-center gap-2 px-8 py-3 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/30 transition-all disabled:opacity-50 disabled:shadow-none transform active:scale-95"
                     >
-                        Next Step <span className="material-icons-round">arrow_forward</span>
+                        Continue <span className="material-icons-round">arrow_forward</span>
                     </button>
                 ) : (
                     <button
@@ -359,7 +353,7 @@ const AddPet: React.FC = () => {
                         className="flex items-center gap-2 px-10 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-500/30 transition-all transform active:scale-95 disabled:opacity-70"
                     >
                         {isGenerating ? <span className="material-icons-round animate-spin">refresh</span> : <span className="material-icons-round">check</span>}
-                        {isGenerating ? 'Saving...' : 'Finish & Save'}
+                        {isGenerating ? 'Saving Profile...' : 'Complete Profile'}
                     </button>
                 )}
             </div>
@@ -369,45 +363,59 @@ const AddPet: React.FC = () => {
 
 // --- STEP 1: IDENTITY ---
 const StepIdentity = ({ formData, update, speciesList }: any) => {
-    // Determine species ID from selected type code
     const selectedSpecies = speciesList?.find((s: any) => s.code === formData.type);
     const speciesId = selectedSpecies?.id;
-
-    // Use Hook for Breeds
-    const { breeds: dbBreeds, loading: loadingBreeds } = useBreeds(speciesId);
-
+    const { breeds: dbBreeds } = useBreeds(speciesId);
     const availableBreeds = dbBreeds.map(b => b.name);
-
-
 
     return (
         <div className="space-y-8">
             <div className="text-center md:text-left">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Who is this cutie?</h2>
-                <p className="text-gray-500 dark:text-gray-400">Let's start with the basics.</p>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Tell us about your pet</h2>
+                <p className="text-gray-500 dark:text-gray-400">First, let's get to know them.</p>
             </div>
 
-            {/* Pet Type Icons */}
-            <div className="grid grid-cols-3 gap-4">
-                {speciesList?.slice(0, 3).map((s: any) => (
+            {/* 1. Pet Type Icons */}
+            <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Pet Type</label>
+                <div className="grid grid-cols-3 gap-4">
                     <button
-                        key={s.code}
-                        onClick={() => update('type', s.code)}
-                        className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 group ${formData.type === s.code
-                            ? 'border-primary bg-primary/5 text-primary shadow-md transform scale-105'
-                            : 'border-gray-100 dark:border-gray-800 bg-white dark:bg-surface-dark text-gray-400 hover:border-primary/30 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        onClick={() => update('type', 'dog')}
+                        className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 group ${formData.type === 'dog'
+                            ? 'border-primary bg-primary/5 shadow-md transform scale-105'
+                            : 'border-gray-100 dark:border-gray-800 bg-white dark:bg-surface-dark hover:border-primary/30'
                             }`}
                     >
-                        <span className={`text-4xl mb-3 transition-transform group-hover:scale-110`}>{s.icon_emoji}</span>
-                        <span className="font-bold capitalize">{s.name_key.split('.')[1]}</span>
+                        <img src="/icons/dog_formal.png" alt="Dog" className="w-16 h-16 object-contain mb-2 drop-shadow-sm opacity-80 group-hover:opacity-100 transition-opacity" />
+                        <span className={`font-bold ${formData.type === 'dog' ? 'text-primary' : 'text-gray-500'}`}>Dog</span>
                     </button>
-                ))}
+                    <button
+                        onClick={() => update('type', 'cat')}
+                        className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 group ${formData.type === 'cat'
+                            ? 'border-primary bg-primary/5 shadow-md transform scale-105'
+                            : 'border-gray-100 dark:border-gray-800 bg-white dark:bg-surface-dark hover:border-primary/30'
+                            }`}
+                    >
+                        <img src="/icons/cat_formal.png" alt="Cat" className="w-16 h-16 object-contain mb-2 drop-shadow-sm opacity-80 group-hover:opacity-100 transition-opacity" />
+                        <span className={`font-bold ${formData.type === 'cat' ? 'text-primary' : 'text-gray-500'}`}>Cat</span>
+                    </button>
+                    <button
+                        onClick={() => update('type', 'other')}
+                        className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 group ${formData.type === 'other'
+                            ? 'border-primary bg-primary/5 shadow-md transform scale-105'
+                            : 'border-gray-100 dark:border-gray-800 bg-white dark:bg-surface-dark hover:border-primary/30'
+                            }`}
+                    >
+                        <img src="/icons/paw_formal.png" alt="Other" className="w-16 h-16 object-contain mb-2 drop-shadow-sm opacity-80 group-hover:opacity-100 transition-opacity" />
+                        <span className={`font-bold ${formData.type === 'other' ? 'text-primary' : 'text-gray-500'}`}>Other</span>
+                    </button>
+                </div>
             </div>
 
-            {/* Custom Type Input if not common */}
-            {!speciesList?.find((s: any) => s.code === formData.type) && (
+            {/* Custom Type Input if 'other' */}
+            {formData.type === 'other' && (
                 <div className="animate-in fade-in slide-in-from-top-2">
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Specify Type</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Specify Species</label>
                     <input
                         type="text"
                         value={formData.customType}
@@ -418,7 +426,7 @@ const StepIdentity = ({ formData, update, speciesList }: any) => {
                 </div>
             )}
 
-            {/* Name & Gender Row */}
+            {/* 2. Name & Gender Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Pet's Name <span className="text-red-500">*</span></label>
@@ -449,7 +457,7 @@ const StepIdentity = ({ formData, update, speciesList }: any) => {
                 </div>
             </div>
 
-            {/* Breed Selector */}
+            {/* 3. Breed Selector */}
             {formData.type !== 'other' && (
                 <div>
                     <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Breed <span className="text-red-500">*</span></label>
@@ -473,7 +481,7 @@ const StepIdentity = ({ formData, update, speciesList }: any) => {
             )}
             {formData.type === 'other' && (
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Species / Breed</label>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Breed / Sub-species</label>
                     <input
                         type="text"
                         value={formData.breed}
@@ -503,57 +511,61 @@ const StepAppearance = ({ formData, update, colorList }: any) => {
     return (
         <div className="space-y-8">
             <div className="text-center md:text-left">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Unique Features</h2>
-                <p className="text-gray-500 dark:text-gray-400">Describe what they look like.</p>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Appearance & Features</h2>
+                <p className="text-gray-500 dark:text-gray-400">What does your pet look like?</p>
             </div>
 
             {/* Photo & Color Row */}
             <div className="flex flex-col md:flex-row gap-8">
                 {/* Photo Upload */}
-                <div className="shrink-0 flex flex-col items-center">
+                <div className="shrink-0 flex flex-col items-center w-full md:w-auto">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 md:hidden">Profile Photo</label>
                     <div
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-40 h-40 rounded-full border-4 border-dashed border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer group relative overflow-hidden bg-gray-50 dark:bg-gray-800 transition-all shadow-sm hover:shadow-md"
+                        className="w-48 h-48 rounded-3xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer group relative overflow-hidden bg-white dark:bg-surface-dark transition-all shadow-sm hover:shadow-md flex flex-col items-center justify-center text-center"
                     >
                         {formData.image ? (
                             <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
                         ) : (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 group-hover:text-primary transition-colors">
-                                <span className="material-icons-round text-4xl mb-2">add_a_photo</span>
-                                <span className="text-xs font-bold uppercase">Upload</span>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 group-hover:text-primary transition-colors p-4">
+                                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-2 group-hover:bg-primary/10 transition-colors">
+                                    <span className="material-icons-round text-2xl text-gray-500 dark:text-gray-400 group-hover:text-primary">add_a_photo</span>
+                                </div>
+                                <span className="text-sm font-bold">Add Photo</span>
                             </div>
                         )}
                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
                     </div>
-                    {!formData.image && <p className="text-xs text-gray-400 mt-3 text-center w-40">No photo? We'll generate an AI avatar for you!</p>}
+                    {!formData.image && (
+                        <div className="mt-3 text-xs text-center text-gray-400 max-w-[200px]">
+                            Tap to upload a photo.
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1 space-y-6">
-                    {/* Visual Color Picker */}
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Coat Color</label>
-                        <div className="flex flex-wrap gap-3">
-                            {colorList?.map((c: any) => (
-                                <button
-                                    key={c.name}
-                                    onClick={() => update('color', c.name)}
-                                    className={`w-10 h-10 rounded-full shadow-sm relative transition-transform hover:scale-110 ${formData.color === c.name ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-gray-900 scale-110' : ''}`}
-                                    style={{ background: c.hex_code || c.name, border: c.hex_code === '#FFFFFF' ? '1px solid #e5e7eb' : 'none' }}
-                                    title={c.name}
-                                >
-                                    {formData.color === c.name && <span className="material-icons-round text-white text-lg drop-shadow-md">check</span>}
-                                </button>
-                            ))}
-                        </div>
-                        {/* Custom Color Input Backup */}
-                        <div className="mt-3">
-                            <input
-                                type="text"
-                                placeholder="Or type a custom color..."
+                    {/* Color Dropdown */}
+                    <div className="relative">
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Coat Color & Pattern</label>
+                        <div className="relative group">
+                            <select
                                 value={formData.color}
                                 onChange={e => update('color', e.target.value)}
-                                className="text-sm border-b border-gray-200 dark:border-gray-700 bg-transparent py-1 w-full focus:border-primary outline-none text-gray-600 dark:text-gray-300"
-                            />
+                                className="w-full h-14 pl-12 pr-10 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark appearance-none outline-none focus:ring-2 focus:ring-primary font-bold text-gray-700 dark:text-white cursor-pointer hover:border-gray-300 transition-colors"
+                            >
+                                <option value="">Select a color</option>
+                                {colorList?.map((c: any) => (
+                                    <option key={c.name} value={c.name}>{c.name}</option>
+                                ))}
+                            </select>
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border border-gray-200 shadow-sm"
+                                style={{
+                                    background: colorList?.find((c: any) => c.name === formData.color)?.hex_code || formData.color || '#eee'
+                                }}
+                            ></div>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                <span className="material-icons-round">expand_more</span>
+                            </div>
                         </div>
                     </div>
 
@@ -609,15 +621,7 @@ const StepHealth = ({ formData, update }: any) => {
         return `${dd}/${mm}/${yyyy}`;
     };
 
-    const parseEUDate = (value: string) => {
-        const parts = value.split(/[\/.-]/);
-        if (parts.length === 3) {
-            const [dd, mm, yyyy] = parts;
-            const iso = `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-            return iso;
-        }
-        return value;
-    };
+    // Helper functions removed as we use native date picker
 
     const [tagInput, setTagInput] = useState('');
 
@@ -636,35 +640,22 @@ const StepHealth = ({ formData, update }: any) => {
         <div className="space-y-8">
             <div className="text-center md:text-left">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Health & ID</h2>
-                <p className="text-gray-500 dark:text-gray-400">Important medical details.</p>
+                <p className="text-gray-500 dark:text-gray-400">Important details for their wellbeing.</p>
             </div>
 
             <div className="p-6 bg-white dark:bg-surface-dark rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-6">
                 {/* Stats Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Date of Birth & Blood Type Row */}
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date of Birth (DD/MM/YYYY)</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date of Birth</label>
                         <input
-                            type="text"
-                            inputMode="numeric"
-                            placeholder="dd/mm/yyyy"
-                            value={formatDisplayDate(formData.birthDate)}
-                            onChange={(e) => update('birthDate', parseEUDate(e.target.value))}
-                            className="w-full h-12 px-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark outline-none focus:ring-2 focus:ring-primary focus:border-primary hover:border-gray-300 transition-colors"
+                            type="date"
+                            value={formData.birthDate}
+                            onChange={(e) => update('birthDate', e.target.value)}
+                            max={new Date().toISOString().split('T')[0]}
+                            className="w-full h-12 px-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark outline-none focus:ring-2 focus:ring-primary focus:border-primary hover:border-gray-300 transition-colors uppercase"
                         />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight</label>
-                        <div className="relative">
-                            <input
-                                type="text"
-                                value={formData.weight}
-                                onChange={(e) => update('weight', e.target.value)}
-                                placeholder="0.0"
-                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary font-bold"
-                            />
-                            <button onClick={() => update('weightUnit', formData.weightUnit === 'kg' ? 'lb' : 'kg')} className="absolute right-2 top-2 bottom-2 px-3 bg-white dark:bg-gray-700 rounded-lg text-xs font-bold text-gray-500 shadow-sm border border-gray-100 dark:border-gray-600">{formData.weightUnit.toUpperCase()}</button>
-                        </div>
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Blood Type</label>
@@ -676,6 +667,36 @@ const StepHealth = ({ formData, update }: any) => {
                             <option value="">Select blood type</option>
                             {BLOOD_TYPES[typeKey].map((t: string) => <option key={t} value={t}>{t}</option>)}
                         </select>
+                    </div>
+
+                    {/* Weight & Height */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight</label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                value={formData.weight}
+                                onChange={(e) => update('weight', e.target.value)}
+                                placeholder="0.0"
+                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary font-bold"
+                            />
+                            <button onClick={() => update('weightUnit', formData.weightUnit === 'kg' ? 'lb' : 'kg')} className="absolute right-2 top-2 bottom-2 px-3 bg-white dark:bg-gray-700 rounded-lg text-xs font-bold text-gray-500 shadow-sm border border-gray-100 dark:border-gray-600">{formData.weightUnit.toUpperCase()}</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Height</label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                inputMode="decimal"
+                                value={formData.height}
+                                onChange={(e) => update('height', e.target.value)}
+                                placeholder="0.0"
+                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary font-bold"
+                            />
+                            <button onClick={() => update('heightUnit', formData.heightUnit === 'cm' ? 'in' : 'cm')} className="absolute right-2 top-2 bottom-2 px-3 bg-white dark:bg-gray-700 rounded-lg text-xs font-bold text-gray-500 shadow-sm border border-gray-100 dark:border-gray-600">{formData.heightUnit.toUpperCase()}</button>
+                        </div>
                     </div>
                 </div>
 
@@ -703,10 +724,9 @@ const StepHealth = ({ formData, update }: any) => {
                     </div>
                 </div>
 
-                {/* Passport & Registration */}
                 <div className="space-y-4">
                     <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <span className="material-icons-round text-primary">badge</span> Documents & Registration
+                        <span className="material-icons-round text-primary">badge</span> Documents
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -720,102 +740,32 @@ const StepHealth = ({ formData, update }: any) => {
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Passport Issuer</label>
-                            <input
-                                type="text"
-                                value={formData.passportIssuer}
-                                onChange={(e) => update('passportIssuer', e.target.value)}
-                                placeholder="e.g. Dr. Smith"
-                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Passport Date</label>
-                            <input
-                                type="date"
-                                value={formData.passportDate}
-                                onChange={(e) => update('passportDate', e.target.value)}
-                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Registration No.</label>
-                            <input
-                                type="text"
-                                value={formData.registrationNumber}
-                                onChange={(e) => update('registrationNumber', e.target.value)}
-                                placeholder="Local Council / KC Reg"
-                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
-                            />
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Country of Issue</label>
+                            <select
+                                value={formData.passportCountry}
+                                onChange={(e) => update('passportCountry', e.target.value)}
+                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary appearance-none"
+                            >
+                                <option value="">Select Country</option>
+                                {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
                         </div>
                     </div>
                 </div>
 
                 <div className="h-px bg-gray-100 dark:bg-gray-800"></div>
 
-                {/* Veterinarian Info */}
-                <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <span className="material-icons-round text-primary">medical_services</span> Primary Veterinarian
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Vet Clinic / Name</label>
-                            <input
-                                type="text"
-                                value={formData.veterinarian}
-                                onChange={(e) => update('veterinarian', e.target.value)}
-                                placeholder="e.g. City Paws Clinic"
-                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Contact (Phone/Email)</label>
-                            <input
-                                type="text"
-                                value={formData.veterinarianContact}
-                                onChange={(e) => update('veterinarianContact', e.target.value)}
-                                placeholder="+1 234 567 8900"
-                                className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-primary"
-                            />
-                        </div>
-                    </div>
-                </div>
 
-                <div className="flex items-center gap-4 pt-4">
-                    <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Spayed / Neutered?</span>
+
+                <div>
+                    <div className="flex items-center gap-3 mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
                         <button
                             onClick={() => update('neutered', !formData.neutered)}
-                            className={`w-12 h-7 rounded-full transition-colors relative ${formData.neutered ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}
+                            className={`w-12 h-7 rounded-full transition-colors relative ${formData.neutered ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
                         >
                             <span className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full shadow-sm transition-transform ${formData.neutered ? 'translate-x-5' : 'translate-x-0'}`}></span>
                         </button>
-                        <span className="text-xs font-bold text-gray-500">{formData.neutered ? 'Yes' : 'No'}</span>
-                    </div>
-                </div>
-
-                {/* Allergies */}
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Allergies</label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                        {formData.allergies.map((a: string) => (
-                            <span key={a} className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-red-100">
-                                {a}
-                                <button onClick={() => removeAllergy(a)} className="hover:text-red-800"><span className="material-icons-round text-sm">close</span></button>
-                            </span>
-                        ))}
-                    </div>
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            value={tagInput}
-                            onChange={e => setTagInput(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && addAllergy()}
-                            placeholder="Type allergy and press Enter..."
-                            className="flex-1 h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm outline-none focus:ring-2 focus:ring-primary"
-                        />
-                        <button onClick={addAllergy} className="px-4 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-gray-500 transition-colors">Add</button>
+                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Spayed / Neutered</span>
                     </div>
                 </div>
             </div>
@@ -824,9 +774,9 @@ const StepHealth = ({ formData, update }: any) => {
 };
 
 // --- STEP 4: MEDICAL & DOCS ---
-const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs, setNewDocs, petId, formData, staticData }: any) => {
+const StepMedical = ({ newVaccines, setNewVaccines, newDocs, setNewDocs, petId, formData, staticData }: any) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [vaxData, setVaxData] = useState({ name: '', date: '' });
+    const [vaxData, setVaxData] = useState({ name: '', date: '', batch: '', expiry: '' });
     const [isUploading, setIsUploading] = useState(false);
     const [dbVaccines, setDbVaccines] = useState<any[]>([]);
 
@@ -876,13 +826,19 @@ const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs
                 id: Date.now().toString(),
                 referenceVaccineId: selectedRef?.id,
                 name: vaxData.name,
-                type: selectedRef?.vaccine_type || 'Core', // Use DB type or default
+                type: selectedRef?.vaccine_type || 'Core',
                 date: vaxData.date,
-                status: 'Valid'
+                status: 'Valid',
+                batchNumber: vaxData.batch,
+                expiryDate: vaxData.expiry
             }]);
-            setVaxData({ name: '', date: '' });
+            setVaxData({ name: '', date: '', batch: '', expiry: '' });
         }
     };
+
+    // Medication handlers removed
+
+
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -925,43 +881,73 @@ const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs
         <div className="space-y-8">
             <div className="text-center md:text-left">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Medical History</h2>
-                <p className="text-gray-500 dark:text-gray-400">Add existing records (Optional).</p>
+                <p className="text-gray-500 dark:text-gray-400">Help us track their health milestones.</p>
             </div>
 
             {/* Quick Add Vaccines */}
             <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <span className="material-icons-round text-blue-500">vaccines</span> Vaccines
+                        <span className="material-icons-round text-blue-500">vaccines</span> Vaccines (Auto-Lookup)
                     </h3>
                 </div>
-                <div className="flex gap-2 mb-4">
-                    <select
-                        value={vaxData.name}
-                        onChange={e => setVaxData({ ...vaxData, name: e.target.value })}
-                        className="flex-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-primary text-sm"
-                    >
-                        <option value="">Select vaccine</option>
-                        {vaccineOptions.map((v: any) => (
-                            <option key={v.name || v} value={v.name || v}>
-                                {v.name || v} {v.type ? `(${v.type})` : v.frequency ? `- ${v.frequency}` : ''}
-                            </option>
-                        ))}
-                    </select>
-                    <input
-                        type="date"
-                        value={vaxData.date} onChange={e => setVaxData({ ...vaxData, date: e.target.value })}
-                        className="w-40 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-primary text-sm"
-                    />
-                    <button onClick={handleAddVax} className="bg-primary text-white p-2.5 rounded-xl shadow-md hover:bg-primary-hover transition-colors">
-                        <span className="material-icons-round">add</span>
-                    </button>
+                <div className="flex flex-col gap-3 mb-4">
+                    <div className="flex gap-2">
+                        <select
+                            value={vaxData.name}
+                            onChange={e => {
+                                // Auto-populate other fields if needed based on selection in future
+                                setVaxData({ ...vaxData, name: e.target.value });
+                            }}
+                            className="flex-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-primary text-sm font-medium"
+                        >
+                            <option value="">Select vaccine...</option>
+                            {vaccineOptions.map((v: any) => (
+                                <option key={v.name || v} value={v.name || v}>
+                                    {v.name || v} {v.type ? `(${v.type})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                        <input
+                            type="date"
+                            value={vaxData.date} onChange={e => setVaxData({ ...vaxData, date: e.target.value })}
+                            className="w-40 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-primary text-sm uppercase"
+                        />
+                    </div>
+                    {/* Extra Vaccine Fields */}
+                    <div className="flex gap-2 animate-in fade-in slide-in-from-top-1">
+                        <input
+                            type="text"
+                            placeholder="Batch No. (Opt)"
+                            value={vaxData.batch}
+                            onChange={e => setVaxData({ ...vaxData, batch: e.target.value })}
+                            className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-primary text-sm"
+                        />
+                        <input
+                            type="date"
+                            placeholder="Expiry"
+                            value={vaxData.expiry}
+                            onChange={e => setVaxData({ ...vaxData, expiry: e.target.value })}
+                            className="w-40 px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 outline-none focus:ring-2 focus:ring-primary text-sm text-gray-400 uppercase"
+                        />
+                        <button onClick={handleAddVax} className="bg-primary text-white px-6 py-2 rounded-xl shadow-md hover:bg-primary-hover transition-colors font-bold text-sm">
+                            Add
+                        </button>
+                    </div>
                 </div>
+
                 {newVaccines.length > 0 ? (
                     <div className="space-y-2">
                         {newVaccines.map((v: any, i: number) => (
-                            <div key={i} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                                <span className="font-bold text-sm text-gray-700 dark:text-gray-300">{v.name} <span className="text-gray-400 font-normal text-xs ml-1">({v.type}) on {v.date}</span></span>
+                            <div key={i} className="flex justify-between items-start p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                <div>
+                                    <span className="font-bold text-sm text-gray-700 dark:text-gray-300 block">{v.name}</span>
+                                    <div className="flex gap-2 text-xs text-gray-400 mt-1">
+                                        <span>{v.date}</span>
+                                        {v.batchNumber && <span>• Batch: {v.batchNumber}</span>}
+                                        {v.type && <span>• {v.type}</span>}
+                                    </div>
+                                </div>
                                 <button onClick={() => setNewVaccines(newVaccines.filter((_: any, idx: number) => idx !== i))} className="text-red-400 hover:text-red-500"><span className="material-icons-round text-sm">close</span></button>
                             </div>
                         ))}
@@ -969,22 +955,7 @@ const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs
                 ) : <p className="text-xs text-gray-400 italic">No vaccines added yet.</p>}
             </div>
 
-            {/* Quick Add Medications */}
-            <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <span className="material-icons-round text-purple-500">medication</span> Medications
-                    </h3>
-                </div>
-                {/* Note: In a full implementation, we would toggle an 'Add Medication' form here similar to vaccines, 
-                    but simpler for now just to show the list placeholder or minimal add */}
-                <p className="text-xs text-gray-400 italic mb-2">Medication management is available in the pet profile after creation.</p>
-                {/* 
-                   For now, we will skip the detailed add-medication inputs here to keep the wizard simple 
-                   unless we strictly need it. The user flow often involves adding basics then details later.
-                   But if we want to allow it:
-                */}
-            </div>
+            {/* Medications Removed as per request */}
 
             {/* Document Uploads */}
             <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
@@ -994,9 +965,19 @@ const StepMedical = ({ newVaccines, setNewVaccines, newMeds, setNewMeds, newDocs
                     </h3>
                 </div>
 
+                {/* Progress Bar Simulation if Uploading */}
+                {isUploading && (
+                    <div className="mb-4">
+                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-500 animate-pulse w-2/3"></div>
+                        </div>
+                        <p className="text-xs text-gray-500 text-center mt-1">Uploading secure files...</p>
+                    </div>
+                )}
+
                 <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-6 text-center hover:border-primary hover:bg-primary/5 cursor-pointer transition-all mb-4"
+                    className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-6 text-center hover:border-primary hover:bg-primary/5 cursor-pointer transition-all mb-4 group"
                 >
                     {isUploading ? (
                         <div className="flex items-center justify-center gap-2 text-primary">

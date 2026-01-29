@@ -288,6 +288,80 @@ const PassportTab: React.FC<PassportTabProps> = ({ pet }) => {
                     </div>
                 </div>
 
+                {/* DIGITAL PASSPORT CARD - PREMIUM REDESIGN */}
+                <div className="perspective-1000">
+                    <div
+                        className="relative group bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[32px] p-8 text-white shadow-2xl overflow-hidden transition-all duration-500 hover:rotate-x-1 hover:rotate-y-1 hover:scale-[1.01]"
+                        style={{ transformStyle: 'preserve-3d' }}
+                    >
+                        {/* Shimmer / Holographic Effect */}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none"></div>
+                        <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-colors duration-700"></div>
+                        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl group-hover:bg-indigo-300/30 transition-colors duration-700"></div>
+
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 shadow-inner">
+                                        <span className="material-icons-round text-4xl">pets</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-black tracking-tight flex items-center gap-2">
+                                            PET PASSPORT
+                                            <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest border border-white/30">Official</span>
+                                        </h3>
+                                        <p className="text-indigo-100 text-xs font-bold uppercase tracking-[0.2em] opacity-80">Waggly Universal ID</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest leading-none">Record No.</p>
+                                    <p className="text-lg font-mono font-bold tracking-tighter">WGL-{pet.id.slice(0, 8).toUpperCase()}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                <div className="space-y-6">
+                                    <PassportField label="Full Name" value={pet.name} isEditing={isEditing} onChange={(val: string) => setFormData({ ...formData, name: val })} />
+                                    <PassportField label="Species / Breed" value={`${pet.species} • ${pet.breed}`} isEditing={isEditing} onChange={(val: string) => {
+                                        const [s, b] = val.split(' • ');
+                                        setFormData({ ...formData, species: s, breed: b });
+                                    }} />
+                                    <PassportField label="Birth Date" value={pet.birthday || 'Not Recorded'} isEditing={isEditing} onChange={(val: string) => setFormData({ ...formData, birthday: val })} />
+                                </div>
+                                <div className="space-y-6">
+                                    <PassportField label="Microchip ID" value={pet.microchipId || 'None'} isEditing={isEditing} onChange={(val: string) => setFormData({ ...formData, microchipId: val })} />
+                                    <PassportField label="Registry No." value={pet.registryId || 'None'} isEditing={isEditing} onChange={(val: string) => setFormData({ ...formData, registryId: val })} />
+                                    <PassportField label="Blood Type" value={pet.bloodType || 'Unknown'} isEditing={isEditing} onChange={(val: string) => setFormData({ ...formData, bloodType: val })} />
+                                </div>
+                                <div className="flex flex-col items-center justify-center md:items-end">
+                                    <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-lg text-center w-full md:w-max group-hover:border-white/40 transition-colors">
+                                        <div className="w-24 h-24 bg-white p-2 rounded-xl mb-2 mx-auto">
+                                            {/* Mock QR-like icon */}
+                                            <div className="w-full h-full bg-indigo-900/10 rounded flex items-center justify-center border-2 border-dashed border-indigo-900/20">
+                                                <span className="material-icons-round text-indigo-900/30 text-4xl">qr_code_2</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] font-bold text-indigo-100 uppercase tracking-widest">Scan for Medical Summary</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-8 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
+                                <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full border border-white/20">
+                                    <span className="material-icons-round text-green-400 text-sm">verified</span>
+                                    <span className="text-xs font-bold tracking-wide">Blockchain Verified Identity</span>
+                                </div>
+                                <button
+                                    onClick={() => setIsEditing(!isEditing)}
+                                    className="px-6 py-2 bg-white text-indigo-600 rounded-xl text-sm font-black shadow-lg shadow-black/20 hover:scale-105 active:scale-95 transition-all w-full sm:w-auto"
+                                >
+                                    {isEditing ? 'Save Changes' : 'Edit Passport'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* PHYSICAL TRAITS (Editable) */}
                 <div className="bg-surface-light dark:bg-surface-dark rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 h-full">
                     <div className="flex items-center justify-between mb-6">

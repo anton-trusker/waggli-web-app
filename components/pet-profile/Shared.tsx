@@ -1,23 +1,33 @@
 
 import React from 'react';
 
-export const HealthMetricCard = ({ icon, label, value, subValue, color }: any) => {
+export const HealthMetricCard = ({ icon, label, value, subValue, color, trend }: any) => {
     const colorClasses: any = {
-        blue: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
-        purple: { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-600 dark:text-purple-400' },
-        red: { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-600 dark:text-red-400' },
-        orange: { bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400' },
+        blue: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', glow: 'group-hover:shadow-blue-500/20' },
+        purple: { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-600 dark:text-purple-400', glow: 'group-hover:shadow-purple-500/20' },
+        red: { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-600 dark:text-red-400', glow: 'group-hover:shadow-red-500/20' },
+        orange: { bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400', glow: 'group-hover:shadow-orange-500/20' },
     };
     const styles = colorClasses[color] || colorClasses.blue;
 
     return (
-        <div className="bg-surface-light dark:bg-surface-dark p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:border-gray-200 dark:hover:border-gray-700 transition-colors">
-            <div className={`w-10 h-10 rounded-xl ${styles.bg} ${styles.text} flex items-center justify-center mb-3`}>
-                <span className="material-icons-round text-xl">{icon}</span>
+        <div className={`group bg-surface-light dark:bg-surface-dark p-5 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-xl hover:-translate-y-1 ${styles.glow} transition-all duration-300`}>
+            <div className="flex justify-between items-start mb-4">
+                <div className={`w-12 h-12 rounded-2xl ${styles.bg} ${styles.text} flex items-center justify-center transition-transform group-hover:scale-110 duration-300`}>
+                    <span className="material-icons-round text-2xl">{icon}</span>
+                </div>
+                {trend && (
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold ${trend === 'up' ? 'bg-green-100 text-green-600' : trend === 'down' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+                        <span className="material-icons-round text-xs">{trend === 'up' ? 'trending_up' : trend === 'down' ? 'trending_down' : 'trending_flat'}</span>
+                        {trend.toUpperCase()}
+                    </div>
+                )}
             </div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">{label}</p>
-            <p className="text-lg font-bold text-gray-900 dark:text-white truncate">{value}</p>
-            {subValue && <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">{subValue}</p>}
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 group-hover:text-gray-500 transition-colors">{label}</p>
+            <div className="flex items-baseline gap-1">
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white transition-colors">{value}</p>
+                {subValue && <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">{subValue}</p>}
+            </div>
         </div>
     );
 };
@@ -39,9 +49,9 @@ export const PassportField = ({ label, value, isEditing, onChange, fullWidth }: 
     <div className={fullWidth ? 'col-span-2' : ''}>
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
         {isEditing ? (
-            <input 
-                type="text" 
-                value={value} 
+            <input
+                type="text"
+                value={value}
                 onChange={(e) => onChange(e.target.value)}
                 className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-primary outline-none transition-all"
             />

@@ -103,9 +103,9 @@ const HealthRecordsTab: React.FC<HealthRecordsTabProps> = ({ pet, onEditRecord, 
         <div className="space-y-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <HealthMetricCard icon="monitor_weight" label="Weight" value={pet.weight} subValue="Stable" color="blue" trend="flat" />
-                <HealthMetricCard icon="straighten" label="Height" value={pet.height || '--'} subValue={pet.height ? 'Last Recorded' : 'Not Set'} color="purple" />
+                <HealthMetricCard icon="straighten" label="Height" value={pet.height || '--'} subValue={pet.height ? 'Last Recorded' : 'Not Set'} color="purple" trend="up" />
                 <HealthMetricCard icon="bloodtype" label="Blood Type" value={pet.bloodType?.split(' ')[0] || '?'} subValue={pet.bloodType?.split(' ').slice(1).join(' ') || 'Unknown'} color="red" />
-                <HealthMetricCard icon="calendar_month" label="Age" value={ageValue} subValue={ageUnit === 'yrs' ? 'Years Old' : 'Months Old'} color="orange" />
+                <HealthMetricCard icon="calendar_month" label="Age" value={ageValue} subValue={ageUnit === 'yrs' ? 'Years Old' : 'Months Old'} color="orange" trend="up" />
             </div>
 
             {/* AI VACCINE RECOMMENDATIONS */}
@@ -223,31 +223,52 @@ const HealthRecordsTab: React.FC<HealthRecordsTabProps> = ({ pet, onEditRecord, 
                 </div>
 
                 <div className="relative">
-                    <div className="absolute left-8 top-4 bottom-4 w-0.5 bg-gray-100 dark:bg-gray-800"></div>
-                    <div className="space-y-6">
+                    <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary/30 via-primary/5 to-transparent dark:from-primary/20 dark:via-primary/5"></div>
+                    <div className="space-y-8 relative">
                         {timelineEvents.map((event, idx) => (
-                            <div key={idx} className="relative pl-20 group">
-                                <div className="absolute left-0 top-1 text-right w-14">
-                                    <span className="block text-xs font-bold text-gray-900 dark:text-white">{event.rawDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                    <span className="block text-[10px] font-medium text-gray-400">{event.rawDate.getFullYear()}</span>
+                            <div key={idx} className="relative pl-16 md:pl-20 group">
+                                <div className="absolute left-0 top-2 text-right w-12 md:w-14">
+                                    <span className="block text-[11px] font-black text-gray-900 dark:text-white uppercase">{event.rawDate.toLocaleDateString('en-US', { month: 'short' })}</span>
+                                    <span className="block text-xl font-black text-primary leading-none">{event.rawDate.getDate()}</span>
+                                    <span className="block text-[9px] font-bold text-gray-400 mt-0.5">{event.rawDate.getFullYear()}</span>
                                 </div>
-                                <div className={`absolute left-[30px] top-1.5 w-3.5 h-3.5 rounded-full border-[3px] border-white dark:border-surface-dark ${event.colorClass.replace('text-', 'bg-')} ring-1 ring-gray-200 dark:ring-gray-700 z-10 transition-transform group-hover:scale-125`}></div>
-                                <div onClick={() => onViewRecord(event.type, event)} className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 hover:shadow-md hover:bg-white dark:hover:bg-gray-800 transition-all cursor-pointer">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex items-start gap-3">
-                                            <div className={`mt-1 p-2 rounded-xl flex-shrink-0 ${event.bgClass} ${event.colorClass}`}>
-                                                <span className="material-icons-round text-lg">{event.icon}</span>
+                                <div className={`absolute left-[30px] top-4 w-4 h-4 rounded-full border-[3px] border-white dark:border-surface-dark ${event.colorClass.replace('text-', 'bg-')} shadow-[0_0_10px_rgba(0,0,0,0.1)] z-10 transition-transform group-hover:scale-150 duration-300 ring-2 ring-transparent group-hover:ring-primary/20`}></div>
+                                <div
+                                    onClick={() => onViewRecord(event.type, event)}
+                                    className="bg-white dark:bg-white/5 border border-gray-100 dark:border-gray-800 rounded-3xl p-5 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-0.5 transition-all cursor-pointer relative overflow-hidden group/card"
+                                >
+                                    <div className={`absolute top-0 right-0 w-32 h-32 ${event.bgClass} opacity-0 group-hover/card:opacity-10 rounded-full blur-3xl -translate-y-16 translate-x-16 transition-opacity`}></div>
+
+                                    <div className="flex items-start justify-between gap-6 relative z-10">
+                                        <div className="flex items-start gap-4">
+                                            <div className={`mt-1 w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center ${event.bgClass} ${event.colorClass} transition-transform group-hover/card:rotate-6 duration-300`}>
+                                                <span className="material-icons-round text-2xl">{event.icon}</span>
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-gray-900 dark:text-white text-sm md:text-base">{event.title}</h4>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{event.subtitle}</p>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h4 className="font-black text-gray-900 dark:text-white text-base md:text-lg tracking-tight">{event.title}</h4>
+                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${event.bgClass} ${event.colorClass}`}>{event.type}</span>
+                                                </div>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed max-w-xl">{event.subtitle}</p>
                                             </div>
                                         </div>
-                                        <span className="material-icons-round text-gray-300 dark:text-gray-600 group-hover:text-primary transition-colors text-xl">chevron_right</span>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className="material-icons-round text-gray-200 dark:text-gray-700 group-hover/card:text-primary transition-colors text-2xl">arrow_forward_ios</span>
+                                            <span className="text-[10px] font-bold text-gray-300 dark:text-gray-600 uppercase tracking-widest">Details</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         ))}
+                        {timelineEvents.length === 0 && (
+                            <div className="pl-20 py-12 text-center md:text-left">
+                                <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-50 dark:bg-white/5 rounded-3xl mb-4 border border-dashed border-gray-200 dark:border-gray-800">
+                                    <span className="material-icons-round text-gray-300 text-3xl">history</span>
+                                </div>
+                                <p className="text-gray-400 font-bold text-sm">No activity records found yet.</p>
+                                <p className="text-[10px] text-gray-300 uppercase tracking-widest mt-1">Add your first medical note above</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

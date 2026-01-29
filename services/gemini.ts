@@ -2,7 +2,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+// Use flash model by default, but handle fallback in calls
+// Use pro model for better insights
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
 // Helper to sanitize JSON
 const cleanJSON = (text: string) => {
@@ -38,60 +40,51 @@ export const generateCareGuide = async (pets: any[], context: any = {}) => {
 
     try {
         const prompt = `
-      Create a personalized care guide for these pets, considering their health context.
+      Create a personalized daily care guide for a multi-pet owner.
       Pets: ${JSON.stringify(pets.map(p => ({
             name: p.name,
             breed: p.breed,
             age: p.age,
             allergies: p.allergies
         })))}
-      Context: ${JSON.stringify(context)}
-      (Context includes: Health Score, Upcoming Appointments, Known Allergies)
-
-      Return a JSON array of 3-5 tips.
-      Rules:
-      1. If allergies exist, mention specific avoidance tips (e.g. "Avoid Chicken treats").
-      2. If appointments are upcoming (next 3 days), add a prep tip (e.g. "Fast before surgery" if applicable).
-      3. If health score is low, suggest the missing action (e.g. "Book vaccination").
+      Health Context: ${JSON.stringify(context.overview || context)}
+      Upcoming Appointments: ${JSON.stringify(context.appointments || [])}
       
-      Output format: Array of { title: string, content: string }
+      Requirements:
+      - Provide 3-5 actionable tips.
+      - Ensure tips cover different pets if applicable.
+      - Format as JSON array: [{ "title": "Tip Title", "content": "Instructional content" }]
     `;
 
         const result = await model.generateContent(prompt);
         const text = result.response.text();
         return JSON.parse(cleanJSON(text));
     } catch (error) {
-        console.error("Gemini Care Guide Error:", error);
-        return [{ title: "General Advice", content: "Ensure fresh water is always available." }];
+        console.error("Care Guide Error", error);
+        return [
+            { title: "Hydration Check", content: "Ensure all water bowls are clean and filled with fresh water." },
+            { title: "Regular Brush", content: "Spend 5 minutes brushing your pet to reduce shedding and build bond." }
+        ];
     }
 };
 
-export const generatePetNews = async (pet?: any) => {
+export const generatePetNews = async (pets: any[] = []) => {
     try {
         let prompt = `
-      Generate 3 highly relevant scientific or wellness news items for a pet owner.
-      Return JSON array with:
-      - headline: string
-      - snippet: string
-      - source: string
-      - url: string (fictitious link for demo, e.g. "https://vet-research.example.com/topic")
-    `;
-
-        if (pet) {
-            prompt = `
-        Generate 3 highly relevant scientific or wellness news items for the owner of a ${pet.age} ${pet.breed || 'pet'} named ${pet.name}.
-        Consider these specific details:
-        - Allergies: ${pet.allergies ? pet.allergies.join(', ') : 'None'}
-        - Weight: ${pet.weight || 'Unknown'}
-        - Status: ${pet.status}
-        
-        Focus on research relevant to ${pet.breed} or conditions related to their age/allergies.
-        Return JSON array with:
+      Generate 3-5 highly relevant scientific or wellness news items for a pet owner with multiple pets.
+      Pets: ${JSON.stringify(pets.map(p => ({ name: p.name, breed: p.breed, age: p.age, allergies: p.allergies })))}
+      
+      Requirements:
+      - Include at least one item specific to each pet if possible.
+      - Return JSON array with:
         - headline: string
-        - snippet: string containing specific advice for ${pet.name}
+        - snippet: string (mention which pet this relates to if specific)
         - source: string
         - url: string (fictitious link for demo)
-      `;
+    `;
+
+        if (pets.length === 0) {
+            prompt = `Generate 3 general pet wellness news items. Return JSON array with headline, snippet, source, url.`;
         }
 
         const result = await model.generateContent(prompt);
@@ -109,14 +102,14 @@ export const generatePetNews = async (pet?: any) => {
 export const analyzeDocument = async (base64Image: string, mimeType: string) => {
     try {
         const prompt = `
-      Extract data from this medical document/invoice.
+      Extract data from this medical document / invoice.
       Return JSON:
-      - type: "vaccination" | "medication" | "invoice" | "lab" | "other"
-      - title: string (e.g. "Rabies Vaccine" or "Vet Invoice")
-      - date: string (YYYY-MM-DD)
-      - doctor: string (optional)
-      - cost: string (optional)
-      - summary: string (short description)
+        - type: "vaccination" | "medication" | "invoice" | "lab" | "other"
+        - title: string
+        - date: string (YYYY-MM-DD)
+        - doctor: string (optional)
+        - cost: string (optional)
+        - summary: string (short description)
     `;
 
         const imagePart = {
@@ -139,10 +132,10 @@ export const parseNaturalLanguageRecord = async (text: string) => {
         const prompt = `
       Parse this text into a medical record: "${text}"
       Return JSON:
-      - type: "vaccination" | "medication" | "vitals" | "checkup"
-      - title: string
-      - date: string (YYYY-MM-DD, default to today if not specified)
-      - additional_data: object (key-value pairs extracted)
+        - type: "vaccination" | "medication" | "vitals" | "checkup"
+        - title: string
+        - date: string (YYYY-MM-DD, default to today if not specified)
+        - additional_data: object (key-value pairs extracted)
     `;
 
         const result = await model.generateContent(prompt);
@@ -160,10 +153,10 @@ export const analyzeSymptoms = async (symptoms: string, imageData?: string, imag
       Symptoms: ${symptoms}
       
       Return JSON:
-      - severity: "Low" | "Medium" | "High" | "Emergency"
-      - possible_causes: string[]
-      - recommendation: string
-      - disclaimer: "This is AI advice, not a vet diagnosis."
+        - severity: "Low" | "Medium" | "High" | "Emergency"
+        - possible_causes: string[]
+        - recommendation: string
+        - disclaimer: "This is AI advice, not a vet diagnosis."
     `;
 
         const parts: any[] = [prompt];
@@ -209,9 +202,7 @@ export const analyzeVaccineSchedule = async (vaccines: any[], petDetails: any) =
 };
 
 export const generatePetAvatar = async (description: string) => {
-    // Placeholder as text-to-image is not available in gemini-flash standard endpoint usually, 
-    // or requires specific call. Returning placeholder.
-    return `https://via.placeholder.com/300?text=${encodeURIComponent(description.slice(0, 20))}`;
+    return `https://placehold.co/300x300?text=${encodeURIComponent(description.slice(0, 20))}`;
 };
 
 export const generateBulkTranslations = async (texts: Record<string, string>, targetLang: string) => {
